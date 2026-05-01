@@ -19,6 +19,7 @@ import { ProgressBar } from './ProgressBar';
 import { TutorialTooltip } from './TutorialTooltip';
 import { JournalButton } from './JournalButtons';
 import { MapButton } from './JournalButtons';
+import ParagraphIllustration from './ParagraphIllustration';
 import { QuickSaveButton, QuickSaveModal } from './QuickSaveSlots';
 import { AchievementsModal } from './AchievementsModal';
 import { TextToSpeech } from './TextToSpeech';
@@ -296,6 +297,9 @@ export function GameScreen() {
                 <span className="ml-2 text-ice-400 font-display text-base sm:text-lg">{currentParagraph.title}</span>
               )}
             </div>
+
+            {/* AI Illustration */}
+            <ParagraphIllustration paragraphId={currentParagraph.id} />
 
             {/* 10A.11 — Paragraph text with footnote tooltips */}
             <div className="space-y-4 mb-8">
