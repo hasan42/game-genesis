@@ -92,6 +92,7 @@ export const useGameStore = create<GameState>((set, get) => ({
   history: [],
   phase: 'title',
   gameStartTime: null,
+  readerMode: false,
 
   setPhase: (phase) => set({ phase }),
 
@@ -116,12 +117,17 @@ export const useGameStore = create<GameState>((set, get) => ({
   },
 
   goToParagraph: (paragraphId, choiceDescription) => {
-    const { stats, keywords, history } = get();
+    const { stats, keywords, history, readerMode } = get();
     const paragraph = getParagraph(paragraphId);
     if (!paragraph) return;
 
     // Apply effects
     const { stats: newStats, keywords: newKeywords } = applyEffects(stats, keywords, paragraph);
+
+    // In reader mode, health can't go below 1
+    if (readerMode && newStats.health <= 0) {
+      newStats.health = 1;
+    }
 
     const newHistory: HistoryEntry = {
       paragraphId,
@@ -131,8 +137,8 @@ export const useGameStore = create<GameState>((set, get) => ({
       keywordsSnapshot: newKeywords.map(k => ({ ...k })),
     };
 
-    // Check death
-    if (newStats.health <= 0) {
+    // Check death — skip in reader mode
+    if (!readerMode && newStats.health <= 0) {
       set({
         currentParagraph: paragraphId,
         stats: newStats,
@@ -223,6 +229,7 @@ export const useGameStore = create<GameState>((set, get) => ({
       history: [],
       phase: 'title',
       gameStartTime: null,
+      readerMode: false,
     });
     try { localStorage.removeItem(STORAGE_KEY); } catch {}
   },
@@ -244,6 +251,11 @@ export const useGameStore = create<GameState>((set, get) => ({
     } catch {
       return false;
     }
+  },
+
+  toggleReaderMode: () => {
+    const { readerMode } = get();
+    set({ readerMode: !readerMode });
   },
 }));
 

@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useGameStore, gameData } from '../engine/store';
 import { SnowEffect } from './SnowEffect';
+import { DynamicBackground } from './DynamicBackground';
 
 export function PrologueScreen() {
   const [sectionIndex, setSectionIndex] = useState(0);
@@ -13,6 +14,7 @@ export function PrologueScreen() {
 
   return (
     <div className="min-h-screen bg-frost-950 text-frost-100 flex flex-col relative">
+      <DynamicBackground />
       <SnowEffect />
       <div className="flex-1 max-w-2xl mx-auto px-4 py-8 w-full relative z-10">
         {/* Progress dots */}

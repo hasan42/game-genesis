@@ -1,15 +1,59 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
+import { useGameStore } from '../engine/store';
+import { PARAGRAPH_LOCATION_MAP } from '../engine/achievements';
+
+type WindIntensity = 'storm' | 'strong' | 'moderate' | 'light' | 'none';
+
+function getWindIntensity(paragraphId: number): WindIntensity {
+  // Spaceport = strong (outside)
+  if (PARAGRAPH_LOCATION_MAP.spaceport?.includes(paragraphId)) return 'strong';
+  // Mine = none (underground)
+  if (PARAGRAPH_LOCATION_MAP.mine?.includes(paragraphId)) return 'none';
+  // Residential = moderate
+  if (PARAGRAPH_LOCATION_MAP.residential?.includes(paragraphId)) return 'moderate';
+  // Command = light (inside)
+  if (PARAGRAPH_LOCATION_MAP.command?.includes(paragraphId)) return 'light';
+  // Warehouse = light (inside)
+  if (PARAGRAPH_LOCATION_MAP.warehouse?.includes(paragraphId)) return 'light';
+  // Workshop = light (inside)
+  if (PARAGRAPH_LOCATION_MAP.workshop?.includes(paragraphId)) return 'light';
+  return 'moderate';
+}
+
+const INTENSITY_VOLUME: Record<WindIntensity, number> = {
+  storm: 0.25,
+  strong: 0.2,
+  moderate: 0.12,
+  light: 0.06,
+  none: 0,
+};
 
 export function AmbientAudio() {
   const [playing, setPlaying] = useState(false);
   const ctxRef = useRef<AudioContext | null>(null);
-  const nodesRef = useRef<{ source: AudioBufferSourceNode; gain: GainNode } | null>(null);
+  const nodesRef = useRef<{ source: AudioBufferSourceNode; gain: GainNode; lfo: OscillatorNode } | null>(null);
+  const currentParagraph = useGameStore(s => s.currentParagraph);
+
+  // Adjust volume based on location
+  useEffect(() => {
+    if (nodesRef.current) {
+      const intensity = getWindIntensity(currentParagraph);
+      const targetVolume = INTENSITY_VOLUME[intensity];
+      const ctx = ctxRef.current;
+      if (ctx) {
+        nodesRef.current.gain.gain.linearRampToValueAtTime(targetVolume, ctx.currentTime + 1);
+      }
+    }
+  }, [currentParagraph]);
 
   const start = useCallback(() => {
     if (nodesRef.current) return;
 
     const ctx = new AudioContext();
     ctxRef.current = ctx;
+
+    const intensity = getWindIntensity(currentParagraph);
+    const initialVolume = INTENSITY_VOLUME[intensity];
 
     // Generate white noise buffer (2 seconds, looped)
     const bufferSize = ctx.sampleRate * 2;
@@ -35,14 +79,14 @@ export function AmbientAudio() {
     lowpass.frequency.value = 900;
     lowpass.Q.value = 0.7;
 
-    // Gain (very quiet by default)
+    // Gain
     const gain = ctx.createGain();
-    gain.gain.value = 0.12;
+    gain.gain.value = initialVolume;
 
     // LFO for volume modulation (gusts of wind)
     const lfo = ctx.createOscillator();
     const lfoGain = ctx.createGain();
-    lfo.frequency.value = 0.15; // slow gusts
+    lfo.frequency.value = 0.15;
     lfoGain.gain.value = 0.04;
     lfo.connect(lfoGain);
     lfoGain.connect(gain.gain);
@@ -54,13 +98,14 @@ export function AmbientAudio() {
     gain.connect(ctx.destination);
     source.start();
 
-    nodesRef.current = { source, gain };
+    nodesRef.current = { source, gain, lfo };
     setPlaying(true);
-  }, []);
+  }, [currentParagraph]);
 
   const stop = useCallback(() => {
     if (nodesRef.current) {
       nodesRef.current.source.stop();
+      nodesRef.current.lfo.stop();
       nodesRef.current = null;
     }
     if (ctxRef.current) {
@@ -83,6 +128,7 @@ export function AmbientAudio() {
     return () => {
       if (nodesRef.current) {
         nodesRef.current.source.stop();
+        nodesRef.current.lfo.stop();
       }
       if (ctxRef.current) {
         ctxRef.current.close();

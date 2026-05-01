@@ -4,14 +4,18 @@ import { SnowEffect } from './SnowEffect';
 import { ExportImportButtons } from './ExportImport';
 import { ENDING_PARAGRAPH_IDS, getReachedEndings, getUnlockedAchievements, ACHIEVEMENTS } from '../engine/achievements';
 import { AchievementsModal } from './AchievementsModal';
+import { DynamicBackground } from './DynamicBackground';
 
 export function TitleScreen() {
   const loadGame = useGameStore(s => s.loadGame);
+  const readerMode = useGameStore(s => s.readerMode);
+  const toggleReaderMode = useGameStore(s => s.toggleReaderMode);
   const hasSave = localStorage.getItem('game-genesis-save');
   const [showAchievements, setShowAchievements] = useState(false);
 
   return (
     <div className="min-h-screen flex flex-col items-center justify-center bg-frost-950 text-frost-100 px-4 relative">
+      <DynamicBackground />
       <SnowEffect />
       {/* Animated snow effect placeholder */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
@@ -54,6 +58,23 @@ export function TitleScreen() {
 
         <div className="mt-6">
           <ExportImportButtons />
+        </div>
+
+        {/* Reader mode toggle */}
+        <div className="mt-4">
+          <button
+            onClick={toggleReaderMode}
+            className={`text-sm transition-colors flex items-center gap-2 mx-auto ${
+              readerMode ? 'text-amber-300 hover:text-amber-200' : 'text-frost-600 hover:text-frost-400'
+            }`}
+            aria-label={readerMode ? 'Выйти из режима читателя' : 'Включить режим читателя'}
+          >
+            <span>📖</span>
+            <span>{readerMode ? 'Режим читателя: ВКЛ' : 'Режим читателя'}</span>
+          </button>
+          {readerMode && (
+            <p className="text-amber-400/70 text-xs text-center mt-1 max-w-xs">Без механики, без смерти, все ветки открыты</p>
+          )}
         </div>
 
         {/* Achievements & Endings summary */}

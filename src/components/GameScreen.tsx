@@ -21,6 +21,9 @@ import { JournalButton } from './JournalButtons';
 import { MapButton } from './JournalButtons';
 import { QuickSaveButton, QuickSaveModal } from './QuickSaveSlots';
 import { AchievementsModal } from './AchievementsModal';
+import { TextToSpeech } from './TextToSpeech';
+import { playSound, SoundEffectsToggle } from './SoundEffects';
+import { DynamicBackground, HealthVignette, VisualEffects } from './DynamicBackground';
 
 // Lazy-loaded heavy modals — reduces initial bundle size
 const JournalModal = lazy(() => import('./JournalModal').then(m => ({ default: m.JournalModal })));
@@ -44,6 +47,8 @@ export function GameScreen() {
   const resetGame = useGameStore(s => s.resetGame);
   const phase = useGameStore(s => s.phase);
   const history = useGameStore(s => s.history);
+  const readerMode = useGameStore(s => s.readerMode);
+  const toggleReaderMode = useGameStore(s => s.toggleReaderMode);
   const [journalOpen, setJournalOpen] = useState(false);
   const [mapOpen, setMapOpen] = useState(false);
   const [saveOpen, setSaveOpen] = useState(false);
@@ -70,6 +75,36 @@ export function GameScreen() {
       showToast(a.icon, `Ачивка: ${a.name}`, a.description);
     }
   }, [phase, history.length, stats, keywords]);
+
+  // Sound effects for state changes
+  const prevStatsRef = useRef(stats);
+  const prevKeywordsRef = useRef(keywords);
+  const prevPhaseRef = useRef(phase);
+  useEffect(() => {
+    // Death sound
+    if (phase === 'dead' && prevPhaseRef.current !== 'dead') {
+      playSound('death');
+    }
+    // Victory sound
+    if (phase === 'victory' && prevPhaseRef.current !== 'victory') {
+      playSound('victory');
+    }
+    // Damage
+    if (stats.health < prevStatsRef.current.health) {
+      playSound('damage');
+    }
+    // Keyword gained
+    if (keywords.length > prevKeywordsRef.current.length) {
+      playSound('keyword');
+    }
+    // Medkit use
+    if (stats.health > prevStatsRef.current.health && stats.medkits < prevStatsRef.current.medkits) {
+      playSound('medkit');
+    }
+    prevStatsRef.current = stats;
+    prevKeywordsRef.current = keywords;
+    prevPhaseRef.current = phase;
+  }, [phase, stats, keywords]);
 
   // Tutorial hints
   useEffect(() => {
@@ -145,21 +180,35 @@ export function GameScreen() {
     );
   }
 
-  // Resolve available choices
-  const availableChoices = resolveChoices(currentParagraph.choices, currentParagraph.conditionalChoices, stats, keywords);
+  // Resolve available choices — in reader mode, all choices are visible
+  const availableChoices = readerMode
+    ? resolveChoicesReaderMode(currentParagraph.choices, currentParagraph.conditionalChoices)
+    : resolveChoices(currentParagraph.choices, currentParagraph.conditionalChoices, stats, keywords);
 
   // Can go back?
   const canGoBack = history.length > 1;
 
   return (
     <div className="min-h-screen bg-frost-950 text-frost-100 relative">
+      <DynamicBackground />
       <SnowEffect />
+      <HealthVignette />
+      <VisualEffects />
       <ToastContainer />
 
-      {/* Top stats bar */}
-      <div className="relative z-10">
-        <StatsPanel />
-      </div>
+      {/* Reader mode banner */}
+      {readerMode && (
+        <div className="bg-amber-900/50 border-b border-amber-700/50 text-amber-200 text-center py-1 text-xs sm:text-sm relative z-20">
+          📖 Режим читателя — механика отключена
+        </div>
+      )}
+
+      {/* Top stats bar — hidden in reader mode */}
+      {!readerMode && (
+        <div className="relative z-10">
+          <StatsPanel />
+        </div>
+      )}
 
       {/* Progress bar */}
       <div className="max-w-2xl mx-auto px-4 pt-2 relative z-10">
@@ -167,20 +216,39 @@ export function GameScreen() {
       </div>
 
       <div className="max-w-2xl mx-auto px-4 py-4 relative z-10 paragraph-enter" key={currentParagraph.id}>
-        {/* Undo button */}
-        {canGoBack && (
-          <button
-            onClick={() => goBackInHistory(history.length - 2)}
-            className="mb-3 flex items-center gap-1.5 text-frost-500 hover:text-ice-300 text-sm transition-colors"
-            aria-label="Вернуться на шаг назад"
-          >
-            <span>↩️</span>
-            <span>Назад</span>
-          </button>
-        )}
+        {/* Toolbar: undo + TTS + SFX + reader mode */}
+        <div className="flex items-center justify-between flex-wrap gap-2 mb-3">
+          <div className="flex items-center gap-2">
+            {canGoBack && (
+              <button
+                onClick={() => goBackInHistory(history.length - 2)}
+                className="flex items-center gap-1.5 text-frost-500 hover:text-ice-300 text-sm transition-colors"
+                aria-label="Вернуться на шаг назад"
+              >
+                <span>↩️</span>
+                <span>Назад</span>
+              </button>
+            )}
+          </div>
+          <div className="flex items-center gap-1 flex-wrap">
+            <TextToSpeech text={currentParagraph.text} />
+            <SoundEffectsToggle />
+            <button
+              onClick={toggleReaderMode}
+              className={`text-sm transition-colors flex items-center gap-1.5 px-2 py-1 rounded hover:bg-frost-900/50 ${
+                readerMode ? 'text-amber-300' : 'text-frost-500 hover:text-frost-300'
+              }`}
+              title={readerMode ? 'Выйти из режима читателя' : 'Режим читателя'}
+              aria-label={readerMode ? 'Выйти из режима читателя' : 'Включить режим читателя'}
+            >
+              <span>📖</span>
+              <span className="hidden sm:inline">{readerMode ? 'Читатель' : 'Читатель'}</span>
+            </button>
+          </div>
+        </div>
 
         {/* Tutorial hint */}
-        {activeTutorial && <TutorialTooltip hintId={activeTutorial} />}
+        {activeTutorial && !readerMode && <TutorialTooltip hintId={activeTutorial} />}
 
         {/* Paragraph number */}
         {currentParagraph.title && (
@@ -199,7 +267,7 @@ export function GameScreen() {
         </div>
 
         {/* Effects info */}
-        {currentParagraph.effects.length > 0 && (
+        {!readerMode && currentParagraph.effects.length > 0 && (
           <div className="mb-6 p-3 bg-frost-900/50 rounded border border-frost-800">
             <div className="text-frost-500 text-xs mb-1">Эффекты:</div>
             {currentParagraph.effects.map((e, i) => (
@@ -212,7 +280,7 @@ export function GameScreen() {
 
         {/* Keywords gained */}
         {currentParagraph.keywords.length > 0 && (
-          <div className="mb-6 p-3 bg-frost-900/50 rounded border border-ice-900/50">
+          <div className="mb-6 p-3 bg-frost-900/50 rounded border border-ice-900/50 animate-glow-pulse">
             <div className="text-ice-500 text-xs mb-1">Ключевые слова записаны:</div>
             {currentParagraph.keywords.map((kw, i) => (
               <span key={i} className="text-ice-300 text-sm mr-3">«{kw}»</span>
@@ -226,7 +294,10 @@ export function GameScreen() {
             {availableChoices.map((choice, i) => (
               <button
                 key={i}
-                onClick={() => goToParagraph(choice.paragraph, choice.description)}
+                onClick={() => {
+                  playSound('click');
+                  goToParagraph(choice.paragraph, choice.description);
+                }}
                 className="w-full text-left px-4 py-3 sm:px-5 sm:py-4 bg-frost-900/60 hover:bg-ice-900/40 border border-frost-800 hover:border-ice-700 rounded-lg transition-all duration-200 group choice-btn focus:outline-none focus:ring-2 focus:ring-ice-600 focus:ring-offset-2 focus:ring-offset-frost-950"
                 data-choice-index={i}
                 aria-label={`Выбор: ${choice.description || `Перейти к параграфу ${choice.paragraph}`}`}
@@ -258,18 +329,18 @@ export function GameScreen() {
         )}
 
         {/* Medkit button */}
-        {stats.medkits > 0 && stats.health < stats.maxHealth && (
+        {!readerMode && stats.medkits > 0 && stats.health < stats.maxHealth && (
           <button
             onClick={useMedkit}
             className="mt-6 w-full px-4 py-3 bg-success/10 hover:bg-success/20 border border-success/30 text-success rounded-lg transition-colors text-sm"
             aria-label={`Использовать аптечку: +${gameData.metadata.medkitHeal} здоровья, осталось ${stats.medkits}`}
           >
-            Использовать аптечку (+{gameData.metadata.medkitHeal} здоровья) • Осталось: {stats.medkits}
+            Использовать аптечку (+{gameData.metadata.medkitHeal} здоровья) • Осталось: {stats.medkits} {formatMedkits(stats.medkits)}
           </button>
         )}
 
-        {/* Keywords panel (collapsible) */}
-        <KeywordsPanel />
+        {/* Keywords panel (collapsible) — hidden in reader mode */}
+        {!readerMode && <KeywordsPanel />}
 
         {/* Journal + Map + Save + Achievements + Reset */}
         <div className="mt-8 flex items-center justify-between flex-wrap gap-2">
@@ -319,6 +390,8 @@ function DeathScreen() {
 
   return (
     <div className="min-h-screen flex flex-col items-center justify-center bg-frost-950 text-frost-100 px-4">
+      <DynamicBackground />
+      <HealthVignette />
       <div className="text-5xl sm:text-6xl mb-4">💀</div>
       <h2 className="text-3xl sm:text-4xl font-serif font-bold text-danger mb-4">Вы погибли</h2>
       <p className="text-frost-400 mb-2 text-sm sm:text-base">Здоровье упало до нуля.</p>
@@ -378,6 +451,7 @@ function VictoryScreen() {
 
   return (
     <div className="min-h-screen flex flex-col items-center justify-center bg-frost-950 text-frost-100 px-4">
+      <DynamicBackground />
       <ToastContainer />
       <div className="text-5xl sm:text-6xl mb-4">❄️</div>
       <h2 className="text-3xl sm:text-4xl font-serif font-bold text-ice-200 mb-4">Победа!</h2>
@@ -715,9 +789,223 @@ function statName(stat: string): string {
   return names[stat] || stat;
 }
 
+function statIcon(stat: string): string {
+  const icons: Record<string, string> = {
+    health: '❤️',
+    aura: '🔮',
+    agility: '⚡',
+    melee: '⚔️',
+    stealth: '👁️',
+    medkits: '🩹',
+  };
+  return icons[stat] || '';
+}
+
 function formatEffect(e: any): string {
-  if (e.type === 'add_medkit') return `+${e.value} аптечк${e.value > 1 ? 'и' : 'а'}`;
-  if (e.type === 'decrease') return `${statName(e.stat)} −${e.value}`;
-  if (e.type === 'increase') return `${statName(e.stat)} +${e.value}`;
+  if (e.type === 'add_medkit') return `+${e.value} ${formatMedkits(e.value)}`;
+  if (e.type === 'remove_medkit') return `−${e.value} ${formatMedkits(e.value)}`;
+  if (e.type === 'use_medkit') return `Использована ${formatMedkits(e.value)}`;
+  if (e.type === 'decrease') return `${statIcon(e.stat)} −${e.value}`;
+  if (e.type === 'increase') return `${statIcon(e.stat)} +${e.value}`;
+  if (e.type === 'set_health') return `❤️ = ${e.value}`;
   return `${e.type}: ${JSON.stringify(e)}`;
+}
+
+function formatMedkits(count: number): string {
+  if (count === 1) return 'аптечка';
+  if (count >= 2 && count <= 4) return 'аптечки';
+  return 'аптечек';
+}
+
+/**
+ * In reader mode, all conditional choices are shown as regular choices.
+ * No stat checks, no keyword requirements, no death.
+ * Both success and fail branches are shown.
+ */
+function resolveChoicesReaderMode(
+  choices: Choice[],
+  conditionalChoices: ConditionalChoice[],
+): Choice[] {
+  const result: Choice[] = [];
+
+  // Regular choices
+  for (const choice of choices) {
+    result.push(choice);
+  }
+
+  // Conditional choices - show both branches
+  for (const cc of conditionalChoices) {
+    switch (cc.type) {
+      case 'stat_check': {
+        if (cc.successParagraph != null) {
+          result.push({
+            paragraph: cc.successParagraph,
+            description: cc.description || `Проверка ${statName(cc.stat || '').toLowerCase()}`,
+          });
+        }
+        if (cc.failParagraph != null) {
+          result.push({
+            paragraph: cc.failParagraph,
+            description: cc.description ? `${cc.description} (неудача)` : `Не удалось — другой путь`,
+          });
+        }
+        break;
+      }
+      case 'keyword_check': {
+        if (cc.hasParagraph != null) {
+          result.push({
+            paragraph: cc.hasParagraph,
+            description: cc.description || `Есть «${cc.keyword}»`,
+          });
+        }
+        if (cc.missingParagraph != null) {
+          result.push({
+            paragraph: cc.missingParagraph,
+            description: cc.description ? `Без «${cc.keyword}»` : `Нет «${cc.keyword}»`,
+          });
+        }
+        break;
+      }
+      case 'any_keyword_check': {
+        if (cc.hasParagraph != null) {
+          result.push({
+            paragraph: cc.hasParagraph,
+            description: cc.description || 'Есть нужное ключевое слово',
+          });
+        }
+        if (cc.missingParagraph != null) {
+          result.push({
+            paragraph: cc.missingParagraph,
+            description: cc.description || 'Без ключевых слов',
+          });
+        }
+        break;
+      }
+      case 'multi_stat_check': {
+        if (cc.successParagraph != null) {
+          result.push({
+            paragraph: cc.successParagraph,
+            description: cc.description || 'Условия выполнены',
+          });
+        }
+        if (cc.failParagraph != null) {
+          result.push({
+            paragraph: cc.failParagraph,
+            description: cc.description ? `${cc.description} (неудача)` : 'Условия не выполнены',
+          });
+        }
+        break;
+      }
+      case 'visit_check': {
+        if (cc.visitedParagraph != null) {
+          result.push({
+            paragraph: cc.visitedParagraph,
+            description: cc.description || 'Вы были там',
+          });
+        }
+        if (cc.notVisitedParagraph != null) {
+          result.push({
+            paragraph: cc.notVisitedParagraph,
+            description: cc.description ? `Не ${cc.description}` : 'Вы не были там',
+          });
+        }
+        break;
+      }
+      case 'dual_stat_check': {
+        if (cc.successParagraph != null) {
+          result.push({
+            paragraph: cc.successParagraph,
+            description: cc.description || 'Характеристики позволяют',
+          });
+        }
+        if (cc.failParagraph != null) {
+          result.push({
+            paragraph: cc.failParagraph,
+            description: cc.description ? `${cc.description} (неудача)` : 'Не хватает сил',
+          });
+        }
+        break;
+      }
+      case 'medkit_choice': {
+        if (cc.helpParagraph != null) {
+          result.push({
+            paragraph: cc.helpParagraph,
+            description: 'Использовать аптечку',
+          });
+        }
+        if (cc.refuseParagraph != null) {
+          result.push({
+            paragraph: cc.refuseParagraph,
+            description: 'Не использовать аптечку',
+          });
+        }
+        break;
+      }
+      case 'optional_action': {
+        if (cc.yesParagraph != null) {
+          result.push({
+            paragraph: cc.yesParagraph,
+            description: cc.description || 'Действовать',
+          });
+        }
+        if (cc.noParagraph != null) {
+          result.push({
+            paragraph: cc.noParagraph,
+            description: cc.description ? `Не ${cc.description}` : 'Пропустить',
+          });
+        }
+        break;
+      }
+      case 'state_check':
+      case 'scenario_check': {
+        if (cc.paragraph != null) {
+          result.push({
+            paragraph: cc.paragraph,
+            description: cc.description || 'Продолжить',
+          });
+        }
+        break;
+      }
+      case 'stat_and_keyword_count_check': {
+        if (cc.successParagraph != null) {
+          result.push({
+            paragraph: cc.successParagraph,
+            description: cc.description || 'Условия выполнены',
+          });
+        }
+        if (cc.failParagraph != null) {
+          result.push({
+            paragraph: cc.failParagraph,
+            description: cc.description ? `${cc.description} (неудача)` : 'Условия не выполнены',
+          });
+        }
+        break;
+      }
+      case 'multi_keyword_branch': {
+        if (cc.branches) {
+          for (const branch of cc.branches) {
+            result.push({
+              paragraph: branch.paragraph,
+              description: `«${branch.keyword}»`,
+            });
+          }
+        }
+        if (cc.noneParagraph != null) {
+          result.push({
+            paragraph: cc.noneParagraph,
+            description: 'Продолжить',
+          });
+        }
+        break;
+      }
+    }
+  }
+
+  // Deduplicate by paragraph
+  const seen = new Set<number>();
+  return result.filter(c => {
+    if (seen.has(c.paragraph)) return false;
+    seen.add(c.paragraph);
+    return true;
+  });
 }

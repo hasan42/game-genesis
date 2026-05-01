@@ -1,5 +1,6 @@
 import { useGameStore } from '../engine/store';
 import { gameData } from '../engine/store';
+import { DynamicBackground } from './DynamicBackground';
 
 const STAT_NAMES: Record<string, string> = {
   agility: 'Ловкость',
@@ -33,7 +34,8 @@ export function SetupScreen() {
   };
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center bg-frost-950 text-frost-100 px-4 py-8">
+    <div className="min-h-screen flex flex-col items-center justify-center bg-frost-950 text-frost-100 px-4 py-8 relative">
+      <DynamicBackground />
       <h2 className="text-2xl sm:text-3xl md:text-4xl font-serif font-bold text-ice-200 mb-2">
         Распределение очков
       </h2>

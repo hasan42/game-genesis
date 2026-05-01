@@ -121,6 +121,7 @@ export interface GameState {
   history: HistoryEntry[];
   phase: 'title' | 'setup' | 'prologue' | 'playing' | 'dead' | 'victory';
   gameStartTime: number | null;
+  readerMode: boolean;
   
   // Actions
   setPhase: (phase: GameState['phase']) => void;
@@ -131,4 +132,5 @@ export interface GameState {
   useMedkit: () => void;
   resetGame: () => void;
   loadGame: () => boolean;
+  toggleReaderMode: () => void;
 }
