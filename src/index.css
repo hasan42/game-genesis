@@ -1,0 +1,133 @@
+@import "tailwindcss";
+
+@theme {
+  --color-ice-50: #f0f9ff;
+  --color-ice-100: #e0f2fe;
+  --color-ice-200: #bae6fd;
+  --color-ice-300: #7dd3fc;
+  --color-ice-400: #38bdf8;
+  --color-ice-500: #0ea5e9;
+  --color-ice-600: #0284c7;
+  --color-ice-700: #0369a1;
+  --color-ice-800: #075985;
+  --color-ice-900: #0c4a6e;
+  --color-ice-950: #082f49;
+
+  --color-frost-50: #f8fafc;
+  --color-frost-100: #f1f5f9;
+  --color-frost-200: #e2e8f0;
+  --color-frost-300: #cbd5e1;
+  --color-frost-400: #94a3b8;
+  --color-frost-500: #64748b;
+  --color-frost-600: #475569;
+  --color-frost-700: #334155;
+  --color-frost-800: #1e293b;
+  --color-frost-900: #0f172a;
+  --color-frost-950: #020617;
+
+  --color-danger: #ef4444;
+  --color-success: #22c55e;
+  --color-warning: #f59e0b;
+  --color-aura-light: #fbbf24;
+  --color-aura-dark: #92400e;
+
+  --font-serif: "Merriweather", "Georgia", serif;
+  --font-mono: "JetBrains Mono", "Fira Code", ui-monospace, monospace;
+
+  --animate-fade-in: fade-in 0.4s ease-out;
+  --animate-slide-up: slide-up 0.4s ease-out;
+  --animate-blizzard: blizzard 3s linear infinite;
+}
+
+@keyframes fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes slide-up {
+  from { opacity: 0; transform: translateY(16px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes blizzard {
+  0% { transform: translateX(0) translateY(0); }
+  50% { transform: translateX(-20px) translateY(10px); }
+  100% { transform: translateX(0) translateY(0); }
+}
+
+@layer base {
+  body {
+    @apply bg-frost-950 text-frost-100 font-serif antialiased;
+  }
+}
+
+/* Blizzard snow particles */
+.snow-container {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  overflow: hidden;
+}
+
+.snowflake {
+  position: absolute;
+  top: -10px;
+  background: white;
+  border-radius: 50%;
+  opacity: 0.15;
+  animation: snowfall linear infinite;
+}
+
+@keyframes snowfall {
+  0% {
+    transform: translateY(-10px) translateX(0);
+    opacity: 0;
+  }
+  10% {
+    opacity: 0.15;
+  }
+  90% {
+    opacity: 0.1;
+  }
+  100% {
+    transform: translateY(100vh) translateX(30px);
+    opacity: 0;
+  }
+}
+
+/* Paragraph transition */
+.paragraph-enter {
+  animation: fade-in 0.4s ease-out, slide-up 0.4s ease-out;
+}
+
+/* Screen transition wrapper */
+.screen-enter {
+  animation: fade-in 0.3s ease-out;
+}
+
+/* Choice hover glow */
+.choice-btn {
+  transition: all 0.25s ease;
+}
+.choice-btn:hover {
+  box-shadow: 0 0 24px rgba(56, 189, 248, 0.12), 0 0 8px rgba(56, 189, 248, 0.08);
+  border-color: rgba(56, 189, 248, 0.35);
+}
+
+/* Action button glow */
+.action-btn {
+  transition: all 0.3s ease;
+}
+.action-btn:hover {
+  box-shadow: 0 0 20px rgba(56, 189, 248, 0.15);
+}
+
+/* Toast slide-in */
+@keyframes slide-in-right {
+  from { opacity: 0; transform: translateX(40px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+.animate-slide-in {
+  animation: slide-in-right 0.3s ease-out;
+}
