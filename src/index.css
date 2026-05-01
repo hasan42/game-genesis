@@ -195,3 +195,105 @@
 .animate-green-wave {
   animation: green-wave 0.5s ease-out forwards;
 }
+
+/* ===== Этап 9: Визуальные улучшения ===== */
+
+/* 9.1 Drop cap (буквица) */
+.drop-cap::first-letter {
+  float: left;
+  font-size: 3.5em;
+  line-height: 0.8;
+  padding-right: 0.08em;
+  padding-top: 0.05em;
+  color: #7dd3fc; /* ice-300 */
+  text-shadow: 0 0 20px rgba(56, 189, 248, 0.5), 0 0 40px rgba(56, 189, 248, 0.2);
+  font-weight: bold;
+}
+
+/* 9.2 Character quote / dialogue style */
+.quote-line {
+  border-left: 3px solid #0ea5e9; /* ice-500 */
+  padding-left: 1rem;
+  margin-left: 0.5rem;
+  color: #7dd3fc; /* ice-300 / text-frost-300 lighter */
+  font-style: italic;
+}
+
+/* 9.5 Death screen — cracking ice overlay */
+@keyframes crack-appear {
+  0% { opacity: 0; }
+  30% { opacity: 0.7; }
+  100% { opacity: 1; }
+}
+
+@keyframes flicker-text {
+  0%, 100% { opacity: 1; text-shadow: 0 0 20px #ef4444, 0 0 40px #ef4444, 0 0 80px rgba(239,68,68,0.5); }
+  10% { opacity: 0.85; }
+  20% { opacity: 1; }
+  30% { opacity: 0.9; text-shadow: 0 0 15px #ef4444, 0 0 30px #ef4444, 0 0 60px rgba(239,68,68,0.4); }
+  50% { opacity: 0.95; }
+  70% { opacity: 1; }
+  80% { opacity: 0.88; text-shadow: 0 0 25px #ef4444, 0 0 50px #ef4444, 0 0 100px rgba(239,68,68,0.6); }
+  90% { opacity: 1; }
+}
+.death-flicker {
+  animation: flicker-text 2.5s ease-in-out infinite;
+}
+
+.crack-overlay {
+  animation: crack-appear 1.5s ease-out forwards;
+}
+
+/* 9.6 Victory — animated stat bars */
+@keyframes bar-fill {
+  from { width: 0%; }
+}
+.stat-bar-animate {
+  animation: bar-fill 1s ease-out forwards;
+}
+
+/* Victory snowflake / confetti */
+@keyframes victory-fall {
+  0% { transform: translateY(-10px) rotate(0deg); opacity: 0; }
+  10% { opacity: 1; }
+  90% { opacity: 0.8; }
+  100% { transform: translateY(100vh) rotate(360deg); opacity: 0; }
+}
+.victory-particle {
+  position: absolute;
+  top: -10px;
+  pointer-events: none;
+  animation: victory-fall linear infinite;
+}
+
+/* 9.7 Mini-map pulse */
+@keyframes map-pulse {
+  0%, 100% { r: 28; opacity: 0.6; }
+  50% { r: 36; opacity: 0; }
+}
+
+/* 9.8 Paragraph header animation */
+@keyframes header-appear {
+  from { opacity: 0; transform: scale(0.9); }
+  to { opacity: 1; transform: scale(1); }
+}
+.paragraph-header-enter {
+  animation: header-appear 0.5s ease-out, fade-in 0.5s ease-out;
+}
+
+/* 9.4 Location transition */
+@keyframes location-fade-in {
+  from { opacity: 0; transform: scale(0.95); }
+  to { opacity: 1; transform: scale(1); }
+}
+.location-transition-enter {
+  animation: location-fade-in 1.5s ease-out forwards;
+}
+
+@keyframes location-fade-out {
+  from { opacity: 1; }
+  to { opacity: 0; }
+}
+.location-transition-exit {
+  animation: location-fade-out 0.5s ease-in forwards;
+}

@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, lazy, Suspense } from 'react';
+import { useState, useEffect, useRef, useMemo, useCallback, lazy, Suspense } from 'react';
 import { useGameStore, useCurrentParagraph, gameData } from '../engine/store';
 import type { Choice, ConditionalChoice, GameStats, KeywordRecord } from '../engine/types';
 import {
@@ -24,6 +24,8 @@ import { AchievementsModal } from './AchievementsModal';
 import { TextToSpeech } from './TextToSpeech';
 import { playSound, SoundEffectsToggle } from './SoundEffects';
 import { DynamicBackground, HealthVignette, VisualEffects } from './DynamicBackground';
+import { LocationTransition, getLocationForParagraph } from './LocationTransition';
+import { processParagraphText } from '../utils/textProcessing';
 
 // Lazy-loaded heavy modals — reduces initial bundle size
 const JournalModal = lazy(() => import('./JournalModal').then(m => ({ default: m.JournalModal })));
@@ -54,6 +56,8 @@ export function GameScreen() {
   const [saveOpen, setSaveOpen] = useState(false);
   const [achievementsOpen, setAchievementsOpen] = useState(false);
   const [activeTutorial, setActiveTutorial] = useState<string | null>(null);
+  const [locationTransition, setLocationTransition] = useState<{ targetParagraphId: number; fromParagraphId: number | null } | null>(null);
+  const prevParagraphIdRef = useRef<number | null>(null);
   const choicesRef = useRef<HTMLDivElement>(null);
 
   // Check achievements on state change
@@ -164,6 +168,24 @@ export function GameScreen() {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [phase]);
 
+  // 9.4 — Location transition: detect when current paragraph changes to a different location
+  useEffect(() => {
+    if (currentParagraph && prevParagraphIdRef.current !== null && prevParagraphIdRef.current !== currentParagraph.id) {
+      const prevLoc = getLocationForParagraph(prevParagraphIdRef.current);
+      const currLoc = getLocationForParagraph(currentParagraph.id);
+      if (prevLoc !== currLoc && currLoc !== null) {
+        setLocationTransition({ targetParagraphId: currentParagraph.id, fromParagraphId: prevParagraphIdRef.current });
+      }
+    }
+    if (currentParagraph) {
+      prevParagraphIdRef.current = currentParagraph.id;
+    }
+  }, [currentParagraph?.id]);
+
+  const handleLocationTransitionComplete = useCallback(() => {
+    setLocationTransition(null);
+  }, []);
+
   if (phase === 'dead') {
     return <DeathScreen />;
   }
@@ -250,20 +272,53 @@ export function GameScreen() {
         {/* Tutorial hint */}
         {activeTutorial && !readerMode && <TutorialTooltip hintId={activeTutorial} />}
 
-        {/* Paragraph number */}
-        {currentParagraph.title && (
-          <div className="text-center mb-6">
-            <span className="text-ice-500 font-mono text-sm">¶ {currentParagraph.id}</span>
-          </div>
-        )}
+        {/* Paragraph number — 9.8 styled header */}
+        <div className="text-center mb-4 paragraph-header-enter" key={`header-${currentParagraph.id}`}>
+          <span
+            className="font-mono text-lg sm:text-xl font-bold"
+            style={{ textShadow: '0 0 20px rgba(56, 189, 248, 0.5), 0 0 40px rgba(56, 189, 248, 0.2)', color: '#7dd3fc' }}
+          >
+            ¶ {currentParagraph.id}
+          </span>
+          {currentParagraph.title && (
+            <span className="ml-2 text-ice-400 font-serif text-base sm:text-lg">{currentParagraph.title}</span>
+          )}
+        </div>
 
-        {/* Paragraph text */}
+        {/* Paragraph text — 9.1 drop cap, 9.2 quotes, 9.3 keyword highlighting */}
         <div className="space-y-4 mb-8">
-          {currentParagraph.text.map((line, i) => (
-            <p key={i} className="text-frost-200 leading-relaxed text-base sm:text-lg font-serif">
-              {line}
-            </p>
-          ))}
+          {(() => {
+            const processed = processParagraphText(
+              currentParagraph.text,
+              keywords,
+              history.length <= 1
+            );
+            return processed.map((line, i) => {
+              const lineContent = line.fragments.map((frag, fi) => {
+                if (frag.isKeyword) {
+                  return (
+                    <span key={fi} className="bg-ice-500/20 text-ice-300 rounded px-1">
+                      {frag.text}
+                    </span>
+                  );
+                }
+                return <span key={fi}>{frag.text}</span>;
+              });
+
+              return (
+                <p
+                  key={i}
+                  className={`leading-relaxed text-base sm:text-lg font-serif ${
+                    line.isQuote
+                      ? 'border-l-3 border-l-ice-500 pl-4 ml-2 italic text-ice-300'
+                      : 'text-frost-200'
+                  } ${line.hasDropCap ? 'drop-cap' : ''}`}
+                >
+                  {lineContent}
+                </p>
+              );
+            });
+          })()}
         </div>
 
         {/* Effects info */}
@@ -380,6 +435,14 @@ export function GameScreen() {
       )}
       {saveOpen && <QuickSaveModal onClose={() => setSaveOpen(false)} />}
       {achievementsOpen && <AchievementsModal onClose={() => setAchievementsOpen(false)} />}
+
+      {/* 9.4 — Location transition overlay */}
+      {locationTransition && (
+        <LocationTransition
+          targetParagraphId={locationTransition.targetParagraphId}
+          onComplete={handleLocationTransitionComplete}
+        />
+      )}
     </div>
   );
 }
@@ -387,23 +450,56 @@ export function GameScreen() {
 function DeathScreen() {
   const resetGame = useGameStore(s => s.resetGame);
   const history = useGameStore(s => s.history);
+  const [showStats, setShowStats] = useState(false);
+
+  // 9.5 — Delayed stats (2 sec)
+  useEffect(() => {
+    const timer = setTimeout(() => setShowStats(true), 2000);
+    return () => clearTimeout(timer);
+  }, []);
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center bg-frost-950 text-frost-100 px-4">
+    <div className="min-h-screen flex flex-col items-center justify-center bg-frost-950 text-frost-100 px-4 relative overflow-hidden">
       <DynamicBackground />
       <HealthVignette />
-      <div className="text-5xl sm:text-6xl mb-4">💀</div>
-      <h2 className="text-3xl sm:text-4xl font-serif font-bold text-danger mb-4">Вы погибли</h2>
-      <p className="text-frost-400 mb-2 text-sm sm:text-base">Здоровье упало до нуля.</p>
-      <p className="text-frost-500 text-xs sm:text-sm mb-6 sm:mb-8">Пройдено параграфов: {history.length}</p>
-      
-      <button
-        onClick={resetGame}
-        className="px-6 sm:px-8 py-3 bg-ice-800 hover:bg-ice-700 text-ice-100 rounded-lg text-base sm:text-lg transition-all duration-300"
-        aria-label="Начать заново"
-      >
-        Начать заново
-      </button>
+
+      {/* 9.5 — Crack overlay (ice cracking effect) */}
+      <div className="absolute inset-0 z-[2] pointer-events-none crack-overlay">
+        {/* Diagonal crack lines */}
+        <svg className="absolute inset-0 w-full h-full" viewBox="0 0 800 600" preserveAspectRatio="none">
+          <line x1="200" y1="0" x2="350" y2="250" stroke="rgba(239,68,68,0.3)" strokeWidth="2" />
+          <line x1="350" y1="250" x2="280" y2="400" stroke="rgba(239,68,68,0.25)" strokeWidth="1.5" />
+          <line x1="350" y1="250" x2="500" y2="350" stroke="rgba(239,68,68,0.2)" strokeWidth="1" />
+          <line x1="550" y1="0" x2="480" y2="180" stroke="rgba(239,68,68,0.25)" strokeWidth="1.5" />
+          <line x1="480" y1="180" x2="600" y2="400" stroke="rgba(239,68,68,0.2)" strokeWidth="1" />
+          <line x1="480" y1="180" x2="420" y2="300" stroke="rgba(239,68,68,0.15)" strokeWidth="1" />
+          <line x1="100" y1="400" x2="250" y2="600" stroke="rgba(239,68,68,0.15)" strokeWidth="1" />
+          <line x1="600" y1="350" x2="700" y2="600" stroke="rgba(239,68,68,0.15)" strokeWidth="1" />
+        </svg>
+      </div>
+
+      {/* 9.5 — Red tint overlay */}
+      <div className="absolute inset-0 z-[1] pointer-events-none bg-danger/20" />
+
+      {/* Main content */}
+      <div className="relative z-10 flex flex-col items-center text-center">
+        <div className="text-5xl sm:text-6xl mb-4">💀</div>
+        <h2 className="text-3xl sm:text-4xl font-serif font-bold text-danger mb-4 death-flicker">
+          ВЫ ПОГИБЛИ
+        </h2>
+        <div className={`transition-all duration-700 ${showStats ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`}>
+          <p className="text-frost-400 mb-2 text-sm sm:text-base">Здоровье упало до нуля.</p>
+          <p className="text-frost-500 text-xs sm:text-sm mb-6 sm:mb-8">Пройдено параграфов: {history.length}</p>
+
+          <button
+            onClick={resetGame}
+            className="px-6 sm:px-8 py-3 bg-ice-800 hover:bg-ice-700 text-ice-100 rounded-lg text-base sm:text-lg transition-all duration-300"
+            aria-label="Начать заново"
+          >
+            Начать заново
+          </button>
+        </div>
+      </div>
     </div>
   );
 }
@@ -411,10 +507,22 @@ function DeathScreen() {
 function VictoryScreen() {
   const resetGame = useGameStore(s => s.resetGame);
   const history = useGameStore(s => s.history);
-  const stats = useGameStore(s => s.stats);
   const gameStartTime = useGameStore(s => s.gameStartTime);
   const currentParagraph = useCurrentParagraph();
   const [achievementsOpen, setAchievementsOpen] = useState(false);
+  const [newEnding, setNewEnding] = useState(false);
+
+  // 9.6 — Snowflake/confetti particles
+  const particles = useMemo(() => {
+    return Array.from({ length: 30 }, (_, i) => ({
+      id: i,
+      left: Math.random() * 100,
+      delay: Math.random() * 5,
+      duration: 4 + Math.random() * 6,
+      size: 4 + Math.random() * 8,
+      type: Math.random() > 0.5 ? '❄' : '✦',
+    }));
+  }, []);
 
   // Statistics
   const paragraphsVisited = new Set(history.map(h => h.paragraphId)).size;
@@ -439,6 +547,14 @@ function VictoryScreen() {
   const totalEndings = ENDING_PARAGRAPH_IDS.length;
   const endingsCount = reachedEndings.size;
 
+  // 9.6 — Check if this is a new ending
+  useEffect(() => {
+    if (currentParagraph && ENDING_PARAGRAPH_IDS.includes(currentParagraph.id)) {
+      // This ending was just saved — check if it's newly reached
+      setNewEnding(true);
+    }
+  }, [currentParagraph?.id]);
+
   // Achievements
   const unlockedAchievements = getUnlockedAchievements();
 
@@ -449,118 +565,167 @@ function VictoryScreen() {
     ? 'Есть ещё неизведанные пути...'
     : null;
 
+  // 9.6 — Animated stat bar data
+  const statBars = useMemo(() => [
+    { label: 'Здоровье', value: bestHealth, max: 40, icon: '❤️', color: 'from-red-500 to-red-400' },
+    { label: 'Аура', value: bestAura, max: 20, icon: '🔮', color: 'from-amber-500 to-amber-400' },
+    { label: 'Ловкость', value: bestAgility, max: 10, icon: '⚡', color: 'from-yellow-500 to-yellow-400' },
+    { label: 'Холодное оружие', value: bestMelee, max: 10, icon: '⚔️', color: 'from-orange-500 to-orange-400' },
+    { label: 'Стелс', value: bestStealth, max: 10, icon: '👁️', color: 'from-purple-500 to-purple-400' },
+  ], [bestHealth, bestAura, bestAgility, bestMelee, bestStealth]);
+
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center bg-frost-950 text-frost-100 px-4">
+    <div className="min-h-screen flex flex-col items-center justify-center bg-frost-950 text-frost-100 px-4 relative overflow-hidden">
       <DynamicBackground />
       <ToastContainer />
-      <div className="text-5xl sm:text-6xl mb-4">❄️</div>
-      <h2 className="text-3xl sm:text-4xl font-serif font-bold text-ice-200 mb-4">Победа!</h2>
-      {currentParagraph && (
-        <div className="max-w-md text-center mb-6">
-          {currentParagraph.text.map((line, i) => (
-            <p key={i} className="text-frost-300 leading-relaxed font-serif mb-3">{line}</p>
-          ))}
-        </div>
-      )}
-      
-      {/* Statistics block */}
-      <div className="bg-frost-900/50 border border-frost-800 rounded-xl p-4 sm:p-6 mb-4 max-w-sm w-full">
-        <h3 className="text-ice-300 font-serif text-sm font-bold mb-3 text-center">📊 Статистика прохождения</h3>
-        <div className="grid grid-cols-2 gap-3 text-center mb-3">
-          <div>
-            <div className="text-ice-200 text-xl font-bold">{history.length}</div>
-            <div className="text-frost-500 text-xs">Шагов</div>
+
+      {/* 9.6 — Victory particles (snowflakes + sparkle) */}
+      <div className="absolute inset-0 pointer-events-none z-0">
+        {particles.map(p => (
+          <div
+            key={p.id}
+            className="victory-particle"
+            style={{
+              left: `${p.left}%`,
+              animationDelay: `${p.delay}s`,
+              animationDuration: `${p.duration}s`,
+              fontSize: `${p.size}px`,
+              color: p.type === '❄' ? '#bae6fd' : '#fbbf24',
+              textShadow: '0 0 4px rgba(56, 189, 248, 0.5)',
+            }}
+          >
+            {p.type}
           </div>
-          <div>
-            <div className="text-ice-200 text-xl font-bold">{paragraphsVisited}/{totalParagraphs}</div>
-            <div className="text-frost-500 text-xs">Параграфов ({explorationPct}%)</div>
-          </div>
-          <div>
-            <div className="text-ice-200 text-xl font-bold">{playTimeStr}</div>
-            <div className="text-frost-500 text-xs">Время игры</div>
-          </div>
-          <div>
-            <div className="text-ice-200 text-xl font-bold">❤️{bestHealth}</div>
-            <div className="text-frost-500 text-xs">Макс. здоровье</div>
-          </div>
-        </div>
-        <div className="border-t border-frost-800 pt-2">
-          <div className="text-frost-500 text-xs mb-1 text-center">Лучшие параметры за игру</div>
-          <div className="flex justify-center gap-4 text-frost-400 text-sm">
-            <span>🔮{bestAura}</span>
-            <span>⚡{bestAgility}</span>
-            <span>⚔️{bestMelee}</span>
-            <span>👁️{bestStealth}</span>
-          </div>
-          <div className="flex justify-center gap-3 mt-2 text-frost-500 text-xs">
-            <span>❤️ финал: {stats.health}</span>
-            <span>🔮 финал: {stats.aura}</span>
-            <span>⚡ финал: {stats.agility}</span>
-          </div>
-        </div>
+        ))}
       </div>
 
-      {/* Endings tracking */}
-      <div className="bg-frost-900/50 border border-frost-800 rounded-xl p-4 sm:p-6 mb-4 max-w-sm w-full">
-        <h3 className="text-ice-300 font-serif text-sm font-bold mb-2 text-center">🔚 Концовки</h3>
-        <div className="text-center">
-          <div className="text-ice-200 text-xl font-bold">{endingsCount} из {totalEndings}</div>
-          <div className="text-frost-500 text-xs mt-1">Найдено концовок</div>
-          {/* Progress bar for endings */}
-          <div className="mt-2 h-1.5 bg-frost-800 rounded-full overflow-hidden">
-            <div
-              className="h-full bg-gradient-to-r from-ice-700 to-ice-400 rounded-full transition-all duration-500"
-              style={{ width: `${totalEndings > 0 ? Math.round((endingsCount / totalEndings) * 100) : 0}%` }}
-            />
-          </div>
-          {endingsHint && (
-            <div className="text-frost-400 text-xs mt-2 italic">💡 {endingsHint}</div>
-          )}
-        </div>
-      </div>
+      <div className="relative z-10 text-center">
+        <div className="text-5xl sm:text-6xl mb-4 animate-bounce">❄️</div>
+        <h2 className="text-3xl sm:text-4xl font-serif font-bold text-ice-200 mb-4" style={{ textShadow: '0 0 30px rgba(56, 189, 248, 0.3)' }}>
+          Победа!
+        </h2>
 
-      {/* Achievements on victory screen */}
-      {unlockedAchievements.size > 0 && (
+        {/* 9.6 — New ending unlocked effect */}
+        {newEnding && (
+          <div className="mb-4 px-4 py-2 bg-ice-900/40 border border-ice-500/40 rounded-lg inline-flex items-center gap-2 animate-glow-pulse">
+            <span className="text-lg">🔓</span>
+            <span className="text-ice-200 text-sm font-serif">Новая концовка разблокирована!</span>
+          </div>
+        )}
+
+        {currentParagraph && (
+          <div className="max-w-md text-center mb-6">
+            {currentParagraph.text.map((line, i) => (
+              <p key={i} className="text-frost-300 leading-relaxed font-serif mb-3">{line}</p>
+            ))}
+          </div>
+        )}
+        
+        {/* 9.6 — Statistics block with animated stat bars */}
         <div className="bg-frost-900/50 border border-frost-800 rounded-xl p-4 sm:p-6 mb-4 max-w-sm w-full">
-          <h3 className="text-ice-300 font-serif text-sm font-bold mb-2 text-center">🏆 Достижения ({unlockedAchievements.size})</h3>
-          <div className="flex justify-center gap-2 flex-wrap">
-            {[...unlockedAchievements].map(id => {
-              // Find achievement data
-              const a = [
-                { id: 'explorer', icon: '🗺️', name: 'Исследователь' },
-                { id: 'conqueror', icon: '👑', name: 'Покоритель' },
-                { id: 'peacemaker', icon: '🕊️', name: 'Миротворец' },
-                { id: 'warrior', icon: '⚔️', name: 'Воин' },
-                { id: 'speedrun', icon: '⚡', name: 'Скоростной бег' },
-                { id: 'discoverer', icon: '🧭', name: 'Первооткрыватель' },
-                { id: 'survivor', icon: '💀', name: 'Выживший' },
-                { id: 'healer', icon: '✨', name: 'Целитель' },
-              ].find(x => x.id === id);
-              return a ? (
-                <span key={id} className="text-2xl" title={a.name}>{a.icon}</span>
-              ) : null;
-            })}
+          <h3 className="text-ice-300 font-serif text-sm font-bold mb-3 text-center">📊 Статистика прохождения</h3>
+          <div className="grid grid-cols-2 gap-3 text-center mb-3">
+            <div>
+              <div className="text-ice-200 text-xl font-bold">{history.length}</div>
+              <div className="text-frost-500 text-xs">Шагов</div>
+            </div>
+            <div>
+              <div className="text-ice-200 text-xl font-bold">{paragraphsVisited}/{totalParagraphs}</div>
+              <div className="text-frost-500 text-xs">Параграфов ({explorationPct}%)</div>
+            </div>
+            <div>
+              <div className="text-ice-200 text-xl font-bold">{playTimeStr}</div>
+              <div className="text-frost-500 text-xs">Время игры</div>
+            </div>
+            <div>
+              <div className="text-ice-200 text-xl font-bold">❤️{bestHealth}</div>
+              <div className="text-frost-500 text-xs">Макс. здоровье</div>
+            </div>
           </div>
-          <div className="text-center mt-2">
-            <button
-              onClick={() => setAchievementsOpen(true)}
-              className="text-frost-500 hover:text-frost-300 text-xs transition-colors"
-            >
-              Все ачивки →
-            </button>
+
+          {/* 9.6 — Animated stat bars */}
+          <div className="border-t border-frost-800 pt-3 space-y-2">
+            <div className="text-frost-500 text-xs mb-2 text-center">Лучшие параметры за игру</div>
+            {statBars.map((bar, i) => (
+              <div key={i} className="flex items-center gap-2">
+                <span className="text-sm w-6 text-center">{bar.icon}</span>
+                <span className="text-frost-400 text-xs w-24 text-left">{bar.label}</span>
+                <div className="flex-1 h-2 bg-frost-800 rounded-full overflow-hidden">
+                  <div
+                    className={`h-full bg-gradient-to-r ${bar.color} rounded-full stat-bar-animate`}
+                    style={{
+                      width: `${bar.max > 0 ? Math.min(100, Math.round((bar.value / bar.max) * 100)) : 0}%`,
+                      animationDelay: `${i * 0.2}s`,
+                    }}
+                  />
+                </div>
+                <span className="text-frost-300 text-xs w-8 text-right">{bar.value}</span>
+              </div>
+            ))}
           </div>
         </div>
-      )}
-      
-      <button
-        onClick={resetGame}
-        className="px-6 sm:px-8 py-3 bg-ice-800 hover:bg-ice-700 text-ice-100 rounded-lg text-base sm:text-lg transition-all duration-300"
-        aria-label="Начать заново"
-      >
-        Начать заново
-      </button>
 
-      {achievementsOpen && <AchievementsModal onClose={() => setAchievementsOpen(false)} />}
+        {/* Endings tracking */}
+        <div className="bg-frost-900/50 border border-frost-800 rounded-xl p-4 sm:p-6 mb-4 max-w-sm w-full">
+          <h3 className="text-ice-300 font-serif text-sm font-bold mb-2 text-center">🔚 Концовки</h3>
+          <div className="text-center">
+            <div className="text-ice-200 text-xl font-bold">{endingsCount} из {totalEndings}</div>
+            <div className="text-frost-500 text-xs mt-1">Найдено концовок</div>
+            {/* Progress bar for endings */}
+            <div className="mt-2 h-1.5 bg-frost-800 rounded-full overflow-hidden">
+              <div
+                className="h-full bg-gradient-to-r from-ice-700 to-ice-400 rounded-full stat-bar-animate"
+                style={{ width: `${totalEndings > 0 ? Math.round((endingsCount / totalEndings) * 100) : 0}%` }}
+              />
+            </div>
+            {endingsHint && (
+              <div className="text-frost-400 text-xs mt-2 italic">💡 {endingsHint}</div>
+            )}
+          </div>
+        </div>
+
+        {/* Achievements on victory screen */}
+        {unlockedAchievements.size > 0 && (
+          <div className="bg-frost-900/50 border border-frost-800 rounded-xl p-4 sm:p-6 mb-4 max-w-sm w-full">
+            <h3 className="text-ice-300 font-serif text-sm font-bold mb-2 text-center">🏆 Достижения ({unlockedAchievements.size})</h3>
+            <div className="flex justify-center gap-2 flex-wrap">
+              {[...unlockedAchievements].map(id => {
+                const a = [
+                  { id: 'explorer', icon: '🗺️', name: 'Исследователь' },
+                  { id: 'conqueror', icon: '👑', name: 'Покоритель' },
+                  { id: 'peacemaker', icon: '🕊️', name: 'Миротворец' },
+                  { id: 'warrior', icon: '⚔️', name: 'Воин' },
+                  { id: 'speedrun', icon: '⚡', name: 'Скоростной бег' },
+                  { id: 'discoverer', icon: '🧭', name: 'Первооткрыватель' },
+                  { id: 'survivor', icon: '💀', name: 'Выживший' },
+                  { id: 'healer', icon: '✨', name: 'Целитель' },
+                ].find(x => x.id === id);
+                return a ? (
+                  <span key={id} className="text-2xl" title={a.name}>{a.icon}</span>
+                ) : null;
+              })}
+            </div>
+            <div className="text-center mt-2">
+              <button
+                onClick={() => setAchievementsOpen(true)}
+                className="text-frost-500 hover:text-frost-300 text-xs transition-colors"
+              >
+                Все ачивки →
+              </button>
+            </div>
+          </div>
+        )}
+        
+        <button
+          onClick={resetGame}
+          className="px-6 sm:px-8 py-3 bg-ice-800 hover:bg-ice-700 text-ice-100 rounded-lg text-base sm:text-lg transition-all duration-300"
+          aria-label="Начать заново"
+        >
+          Начать заново
+        </button>
+
+        {achievementsOpen && <AchievementsModal onClose={() => setAchievementsOpen(false)} />}
+      </div>
     </div>
   );
 }

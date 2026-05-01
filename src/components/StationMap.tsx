@@ -120,9 +120,10 @@ export function StationMap({ onClose }: { onClose?: () => void }) {
               let textColor = '#4a6a9a';
               let radius = 28;
 
+              // 9.7 — Color coding: visited (cyan) / not visited (gray) / current (bright)
               if (isVisited) {
                 fillColor = '#1a3a5a';
-                strokeColor = '#4a90d9';
+                strokeColor = '#4a90d9'; // cyan for visited
                 textColor = '#8ab4f8';
               }
               if (isCurrent) {
@@ -130,6 +131,12 @@ export function StationMap({ onClose }: { onClose?: () => void }) {
                 strokeColor = '#6ab0ff';
                 textColor = '#c0d8ff';
                 radius = 32;
+              }
+              // Not visited at all stays gray
+              if (!isVisited && !isCurrent) {
+                fillColor = '#0d1520';
+                strokeColor = '#2a3a5a';
+                textColor = '#3a4a6a';
               }
               if (isHovered) {
                 strokeColor = '#8ab4f8';
@@ -143,12 +150,18 @@ export function StationMap({ onClose }: { onClose?: () => void }) {
                   onMouseLeave={() => setHoveredId(null)}
                   className="cursor-pointer"
                 >
-                  {/* Glow effect for current */}
+                  {/* 9.7 — Pulsing dot for current location */}
                   {isCurrent && (
-                    <circle cx={loc.x} cy={loc.y} r={radius + 8} fill="none" stroke="#4a90d9" strokeWidth="1" opacity="0.3">
-                      <animate attributeName="r" values={`${radius + 5};${radius + 12};${radius + 5}`} dur="2s" repeatCount="indefinite" />
-                      <animate attributeName="opacity" values="0.3;0.1;0.3" dur="2s" repeatCount="indefinite" />
-                    </circle>
+                    <>
+                      <circle cx={loc.x} cy={loc.y} r={radius + 8} fill="none" stroke="#4a90d9" strokeWidth="1" opacity="0.3">
+                        <animate attributeName="r" values={`${radius + 5};${radius + 14};${radius + 5}`} dur="2s" repeatCount="indefinite" />
+                        <animate attributeName="opacity" values="0.4;0.1;0.4" dur="2s" repeatCount="indefinite" />
+                      </circle>
+                      <circle cx={loc.x} cy={loc.y} r={radius + 14} fill="none" stroke="#4a90d9" strokeWidth="0.5" opacity="0.15">
+                        <animate attributeName="r" values={`${radius + 12};${radius + 20};${radius + 12}`} dur="2s" repeatCount="indefinite" />
+                        <animate attributeName="opacity" values="0.15;0;0.15" dur="2s" repeatCount="indefinite" />
+                      </circle>
+                    </>
                   )}
                   <circle cx={loc.x} cy={loc.y} r={radius} fill={fillColor} stroke={strokeColor} strokeWidth={isCurrent ? 2.5 : 1.5} />
                   <text x={loc.x} y={loc.y - 2} textAnchor="middle" dominantBaseline="middle" fill={textColor} fontSize="10" fontWeight="bold">
@@ -156,6 +169,10 @@ export function StationMap({ onClose }: { onClose?: () => void }) {
                       <tspan key={i} x={loc.x} dy={i === 0 ? '-0.3em' : '1.1em'}>{word}</tspan>
                     ))}
                   </text>
+                  {/* 9.7 — Status indicator for visited/unvisited */}
+                  {!isVisited && !isCurrent && (
+                    <text x={loc.x + radius - 4} y={loc.y - radius + 8} fill="#64748b" fontSize="10" textAnchor="middle">🔒</text>
+                  )}
                 </g>
               );
             })}
@@ -175,7 +192,10 @@ export function StationMap({ onClose }: { onClose?: () => void }) {
               <div className="text-ice-200 font-serif text-sm font-bold mb-1">
                 {hoveredLocation.name}
                 {visitedLocations.has(hoveredLocation.id) && (
-                  <span className="text-ice-500 text-xs ml-2">✓ посещено</span>
+                  <span className="text-cyan-400 text-xs ml-2">✓ посещено</span>
+                )}
+                {!visitedLocations.has(hoveredLocation.id) && (
+                  <span className="text-frost-600 text-xs ml-2">🔒 не посещено</span>
                 )}
                 {currentLocation === hoveredLocation.id && (
                   <span className="text-ice-400 text-xs ml-2">📍 вы здесь</span>
@@ -185,7 +205,7 @@ export function StationMap({ onClose }: { onClose?: () => void }) {
             </div>
           ) : (
             <div className="text-frost-600 text-xs text-center">
-              Наведите на локацию для подробностей
+              Наведите на локацию для подробностей • 🟦 посещено • ⬜ не посещено
             </div>
           )}
         </div>
