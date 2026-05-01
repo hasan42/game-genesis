@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useGameStore } from '../engine/store';
+import { TimeIndicator } from './TimeIndicator';
 
 const STAT_CONFIG = [
   { key: 'health', label: 'Здоровье', icon: '❤️', color: 'bg-danger', showBar: true },
@@ -20,6 +21,9 @@ export function StatsPanel() {
       <div className="max-w-2xl mx-auto px-4 py-2">
         {/* Mobile: compact view with icons + health bar */}
         <div className="flex items-center gap-2 sm:gap-4">
+          {/* Time indicator */}
+          <TimeIndicator />
+
           {STAT_CONFIG.map(({ key, label, icon, color, showBar }) => {
             const value = (stats as any)[key];
             return (

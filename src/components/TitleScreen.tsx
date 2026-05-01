@@ -23,7 +23,7 @@ export function TitleScreen() {
       </div>
       
       <div className="relative z-10 text-center">
-        <h1 className="text-4xl sm:text-6xl md:text-8xl font-serif font-bold text-ice-200 mb-2 tracking-wider">
+        <h1 className="text-4xl sm:text-6xl md:text-8xl font-display font-bold text-ice-200 mb-2 tracking-wider">
           ГЕНЕЗИС
         </h1>
         <p className="text-frost-400 text-base sm:text-lg md:text-xl mb-8 sm:mb-12 font-serif italic">

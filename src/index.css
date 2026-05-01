@@ -33,6 +33,7 @@
 
   --font-serif: "Merriweather", "Georgia", serif;
   --font-mono: "JetBrains Mono", "Fira Code", ui-monospace, monospace;
+  --font-display: "Cinzel", "Merriweather", serif;
 
   --animate-fade-in: fade-in 0.4s ease-out;
   --animate-slide-up: slide-up 0.4s ease-out;
@@ -296,4 +297,133 @@
 }
 .location-transition-exit {
   animation: location-fade-out 0.5s ease-in forwards;
+}
+
+/* ===== Этап 10A: Визуальные улучшения ===== */
+
+/* 10A.1 — Parallax star twinkle */
+@keyframes twinkle {
+  0%, 100% { opacity: 0.3; }
+  50% { opacity: 0.8; }
+}
+
+/* 10A.1 — Parallax near-layer particle drift */
+@keyframes parallax-particle {
+  0% {
+    transform: translateY(-10px) translateX(0);
+    opacity: 0;
+  }
+  10% { opacity: 0.6; }
+  90% { opacity: 0.3; }
+  100% {
+    transform: translateY(100vh) translateX(20px);
+    opacity: 0;
+  }
+}
+
+/* 10A.2 — Splash screen letter-by-letter */
+.splash-letter {
+  opacity: 0;
+  transform: translateY(20px);
+  transition: opacity 0.5s ease, transform 0.5s ease, text-shadow 0.5s ease;
+  color: #7dd3fc;
+}
+.splash-letter-visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* 10A.2 — Ice particles flying from splash title */
+.ice-particle {
+  animation: ice-particle-fly 0.8s cubic-bezier(0, 0.5, 0.5, 1) forwards;
+}
+@keyframes ice-particle-fly {
+  0% {
+    transform: translate(-50%, -50%) scale(1);
+    opacity: 1;
+  }
+  100% {
+    transform: translate(
+      calc(-50% + cos(var(--angle)) * var(--distance)),
+      calc(-50% + sin(var(--angle)) * var(--distance))
+    ) scale(0);
+    opacity: 0;
+  }
+}
+
+/* 10A.2 — Station breathing background for splash */
+.station-breathe-bg {
+  background: radial-gradient(ellipse at center, rgba(56, 189, 248, 0.05) 0%, transparent 70%);
+  animation: station-breathe 10s ease-in-out infinite;
+}
+
+/* 10A.3 — Choice particles (CSS for the Web Animations API fallback) */
+.choice-particle {
+  animation: choice-particle-fly 0.6s cubic-bezier(0, 0.5, 0.5, 1) forwards;
+}
+@keyframes choice-particle-fly {
+  0% {
+    transform: translate(-50%, -50%) scale(1);
+    opacity: 1;
+  }
+  100% {
+    transform: translate(
+      calc(-50% + cos(var(--angle)) * var(--distance)),
+      calc(-50% + sin(var(--angle)) * var(--distance))
+    ) scale(0);
+    opacity: 0;
+  }
+}
+
+/* 10A.4 — Critical health pulsing border */
+.critical-health-overlay {
+  transition: box-shadow 0.3s ease;
+}
+.critical-health-mild {
+  box-shadow: inset 0 0 60px rgba(239, 68, 68, 0.15);
+  animation: pulse-red-mild 2s ease-in-out infinite;
+}
+.critical-health-intense {
+  box-shadow: inset 0 0 80px rgba(239, 68, 68, 0.3);
+  animation: pulse-red-intense 1s ease-in-out infinite;
+}
+@keyframes pulse-red-mild {
+  0%, 100% { box-shadow: inset 0 0 60px rgba(239, 68, 68, 0.1); }
+  50% { box-shadow: inset 0 0 80px rgba(239, 68, 68, 0.25); }
+}
+@keyframes pulse-red-intense {
+  0%, 100% { box-shadow: inset 0 0 60px rgba(239, 68, 68, 0.2); }
+  50% { box-shadow: inset 0 0 100px rgba(239, 68, 68, 0.45); }
+}
+
+/* 10A.5 — Snow intensity transition */
+.snow-intensity-transition {
+  transition: opacity 2s ease-in-out;
+}
+
+/* 10A.7 — FAB item animation */
+.fab-item-enter {
+  animation: fab-item-in 0.2s ease-out forwards;
+  opacity: 0;
+  transform: translateY(10px) scale(0.8);
+}
+@keyframes fab-item-in {
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* 10A.9 — Choice card left border */
+.border-l-3 {
+  border-left-width: 3px;
+}
+
+/* 10A.13 — Station breathing effect */
+@keyframes station-breathe {
+  0%, 100% { opacity: 0.95; }
+  50% { opacity: 1; }
+}
+.station-breathe {
+  animation: station-breathe 10s ease-in-out infinite;
 }

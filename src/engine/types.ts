@@ -122,6 +122,7 @@ export interface GameState {
   phase: 'title' | 'setup' | 'prologue' | 'playing' | 'dead' | 'victory';
   gameStartTime: number | null;
   readerMode: boolean;
+  gameHour: number; // 10Б.3 — Day/Night cycle hour (starts at 8, +1 per paragraph)
   
   // Actions
   setPhase: (phase: GameState['phase']) => void;

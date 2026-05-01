@@ -26,6 +26,12 @@ import { playSound, SoundEffectsToggle } from './SoundEffects';
 import { DynamicBackground, HealthVignette, VisualEffects } from './DynamicBackground';
 import { LocationTransition, getLocationForParagraph } from './LocationTransition';
 import { processParagraphText } from '../utils/textProcessing';
+import { ChoiceCard, inferChoiceType } from './ChoiceCard';
+import { SnowflakeDivider } from './SnowflakeDivider';
+import { CriticalHealthOverlay } from './CriticalHealthOverlay';
+import { FloatingActionButton } from './FloatingActionButton';
+import { BottomSheet } from './BottomSheet';
+import { FootnoteTooltip, findLoreTerms } from './FootnoteTooltip';
 
 // Lazy-loaded heavy modals — reduces initial bundle size
 const JournalModal = lazy(() => import('./JournalModal').then(m => ({ default: m.JournalModal })));
@@ -55,6 +61,7 @@ export function GameScreen() {
   const [mapOpen, setMapOpen] = useState(false);
   const [saveOpen, setSaveOpen] = useState(false);
   const [achievementsOpen, setAchievementsOpen] = useState(false);
+  const [keywordsSheetOpen, setKeywordsSheetOpen] = useState(false);
   const [activeTutorial, setActiveTutorial] = useState<string | null>(null);
   const [locationTransition, setLocationTransition] = useState<{ targetParagraphId: number; fromParagraphId: number | null } | null>(null);
   const prevParagraphIdRef = useRef<number | null>(null);
@@ -216,6 +223,7 @@ export function GameScreen() {
       <SnowEffect />
       <HealthVignette />
       <VisualEffects />
+      <CriticalHealthOverlay />
       <ToastContainer />
 
       {/* Reader mode banner */}
@@ -233,194 +241,325 @@ export function GameScreen() {
       )}
 
       {/* Progress bar */}
-      <div className="max-w-2xl mx-auto px-4 pt-2 relative z-10">
+      <div className="max-w-2xl lg:max-w-5xl mx-auto px-4 pt-2 relative z-10">
         <ProgressBar />
       </div>
 
-      <div className="max-w-2xl mx-auto px-4 py-4 relative z-10 paragraph-enter" key={currentParagraph.id}>
-        {/* Toolbar: undo + TTS + SFX + reader mode */}
-        <div className="flex items-center justify-between flex-wrap gap-2 mb-3">
-          <div className="flex items-center gap-2">
-            {canGoBack && (
-              <button
-                onClick={() => goBackInHistory(history.length - 2)}
-                className="flex items-center gap-1.5 text-frost-500 hover:text-ice-300 text-sm transition-colors"
-                aria-label="Вернуться на шаг назад"
-              >
-                <span>↩️</span>
-                <span>Назад</span>
-              </button>
-            )}
-          </div>
-          <div className="flex items-center gap-1 flex-wrap">
-            <TextToSpeech text={currentParagraph.text} />
-            <SoundEffectsToggle />
-            <button
-              onClick={toggleReaderMode}
-              className={`text-sm transition-colors flex items-center gap-1.5 px-2 py-1 rounded hover:bg-frost-900/50 ${
-                readerMode ? 'text-amber-300' : 'text-frost-500 hover:text-frost-300'
-              }`}
-              title={readerMode ? 'Выйти из режима читателя' : 'Режим читателя'}
-              aria-label={readerMode ? 'Выйти из режима читателя' : 'Включить режим читателя'}
-            >
-              <span>📖</span>
-              <span className="hidden sm:inline">{readerMode ? 'Читатель' : 'Читатель'}</span>
-            </button>
-          </div>
-        </div>
-
-        {/* Tutorial hint */}
-        {activeTutorial && !readerMode && <TutorialTooltip hintId={activeTutorial} />}
-
-        {/* Paragraph number — 9.8 styled header */}
-        <div className="text-center mb-4 paragraph-header-enter" key={`header-${currentParagraph.id}`}>
-          <span
-            className="font-mono text-lg sm:text-xl font-bold"
-            style={{ textShadow: '0 0 20px rgba(56, 189, 248, 0.5), 0 0 40px rgba(56, 189, 248, 0.2)', color: '#7dd3fc' }}
-          >
-            ¶ {currentParagraph.id}
-          </span>
-          {currentParagraph.title && (
-            <span className="ml-2 text-ice-400 font-serif text-base sm:text-lg">{currentParagraph.title}</span>
-          )}
-        </div>
-
-        {/* Paragraph text — 9.1 drop cap, 9.2 quotes, 9.3 keyword highlighting */}
-        <div className="space-y-4 mb-8">
-          {(() => {
-            const processed = processParagraphText(
-              currentParagraph.text,
-              keywords,
-              history.length <= 1
-            );
-            return processed.map((line, i) => {
-              const lineContent = line.fragments.map((frag, fi) => {
-                if (frag.isKeyword) {
-                  return (
-                    <span key={fi} className="bg-ice-500/20 text-ice-300 rounded px-1">
-                      {frag.text}
-                    </span>
-                  );
-                }
-                return <span key={fi}>{frag.text}</span>;
-              });
-
-              return (
-                <p
-                  key={i}
-                  className={`leading-relaxed text-base sm:text-lg font-serif ${
-                    line.isQuote
-                      ? 'border-l-3 border-l-ice-500 pl-4 ml-2 italic text-ice-300'
-                      : 'text-frost-200'
-                  } ${line.hasDropCap ? 'drop-cap' : ''}`}
+      {/* 10A.6 — Two-column layout on desktop (>= 1024px) */}
+      <div className="max-w-2xl lg:max-w-5xl mx-auto px-4 py-4 relative z-10 paragraph-enter" key={currentParagraph.id}>
+        <div className="lg:flex lg:gap-8">
+          {/* Left column — paragraph text (60% on desktop) */}
+          <div className="lg:w-[60%]">
+            {/* Toolbar: undo + TTS + SFX + reader mode */}
+            <div className="flex items-center justify-between flex-wrap gap-2 mb-3">
+              <div className="flex items-center gap-2">
+                {canGoBack && (
+                  <button
+                    onClick={() => goBackInHistory(history.length - 2)}
+                    className="flex items-center gap-1.5 text-frost-500 hover:text-ice-300 text-sm transition-colors"
+                    aria-label="Вернуться на шаг назад"
+                  >
+                    <span>↩️</span>
+                    <span>Назад</span>
+                  </button>
+                )}
+              </div>
+              <div className="flex items-center gap-1 flex-wrap">
+                <TextToSpeech text={currentParagraph.text} />
+                <SoundEffectsToggle />
+                <button
+                  onClick={toggleReaderMode}
+                  className={`text-sm transition-colors flex items-center gap-1.5 px-2 py-1 rounded hover:bg-frost-900/50 ${
+                    readerMode ? 'text-amber-300' : 'text-frost-500 hover:text-frost-300'
+                  }`}
+                  title={readerMode ? 'Выйти из режима читателя' : 'Режим читателя'}
+                  aria-label={readerMode ? 'Выйти из режима читателя' : 'Включить режим читателя'}
                 >
-                  {lineContent}
-                </p>
-              );
-            });
-          })()}
-        </div>
+                  <span>📖</span>
+                  <span className="hidden sm:inline">{readerMode ? 'Читатель' : 'Читатель'}</span>
+                </button>
+              </div>
+            </div>
 
-        {/* Effects info */}
-        {!readerMode && currentParagraph.effects.length > 0 && (
-          <div className="mb-6 p-3 bg-frost-900/50 rounded border border-frost-800">
-            <div className="text-frost-500 text-xs mb-1">Эффекты:</div>
-            {currentParagraph.effects.map((e, i) => (
-              <span key={i} className="text-sm mr-2">
-                {formatEffect(e)}
+            {/* Tutorial hint */}
+            {activeTutorial && !readerMode && <TutorialTooltip hintId={activeTutorial} />}
+
+            {/* 10A.12 — Paragraph header with display font */}
+            <div className="text-center mb-4 paragraph-header-enter" key={`header-${currentParagraph.id}`}>
+              <span
+                className="font-mono text-lg sm:text-xl font-bold"
+                style={{ textShadow: '0 0 20px rgba(56, 189, 248, 0.5), 0 0 40px rgba(56, 189, 248, 0.2)', color: '#7dd3fc' }}
+              >
+                ¶ {currentParagraph.id}
               </span>
-            ))}
-          </div>
-        )}
+              {currentParagraph.title && (
+                <span className="ml-2 text-ice-400 font-display text-base sm:text-lg">{currentParagraph.title}</span>
+              )}
+            </div>
 
-        {/* Keywords gained */}
-        {currentParagraph.keywords.length > 0 && (
-          <div className="mb-6 p-3 bg-frost-900/50 rounded border border-ice-900/50 animate-glow-pulse">
-            <div className="text-ice-500 text-xs mb-1">Ключевые слова записаны:</div>
-            {currentParagraph.keywords.map((kw, i) => (
-              <span key={i} className="text-ice-300 text-sm mr-3">«{kw}»</span>
-            ))}
-          </div>
-        )}
+            {/* 10A.11 — Paragraph text with footnote tooltips */}
+            <div className="space-y-4 mb-8">
+              {(() => {
+                const processed = processParagraphText(
+                  currentParagraph.text,
+                  keywords,
+                  history.length <= 1
+                );
+                return processed.map((line, i) => {
+                  const lineContent = line.fragments.map((frag, fi) => {
+                    if (frag.isKeyword) {
+                      return (
+                        <span key={fi} className="bg-ice-500/20 text-ice-300 rounded px-1">
+                          {frag.text}
+                        </span>
+                      );
+                    }
+                    // 10A.11 — Check for lore terms and add footnote tooltips
+                    const segments = findLoreTerms(frag.text);
+                    if (segments.length > 1 || (segments.length === 1 && segments[0].term)) {
+                      return (
+                        <span key={fi}>
+                          {segments.map((seg, si) => {
+                            if (seg.term && seg.definition) {
+                              return (
+                                <span key={si} className="inline">
+                                  <span className="text-ice-300 border-b border-ice-600/40 border-dotted">{seg.text}</span>
+                                  <FootnoteTooltip term={seg.term} definition={seg.definition} />
+                                </span>
+                              );
+                            }
+                            return <span key={si}>{seg.text}</span>;
+                          })}
+                        </span>
+                      );
+                    }
+                    return <span key={fi}>{frag.text}</span>;
+                  });
 
-        {/* Choices */}
-        {availableChoices.length > 0 && (
-          <div className="space-y-3 mt-8" ref={choicesRef}>
-            {availableChoices.map((choice, i) => (
+                  return (
+                    <p
+                      key={i}
+                      className={`leading-relaxed text-base sm:text-lg font-serif ${
+                        line.isQuote
+                          ? 'border-l-3 border-l-ice-500 pl-4 ml-2 italic text-ice-300'
+                          : 'text-frost-200'
+                      } ${line.hasDropCap ? 'drop-cap' : ''}`}
+                    >
+                      {lineContent}
+                    </p>
+                  );
+                });
+              })()}
+            </div>
+
+            {/* Effects info */}
+            {!readerMode && currentParagraph.effects.length > 0 && (
+              <div className="mb-6 p-3 bg-frost-900/50 rounded border border-frost-800">
+                <div className="text-frost-500 text-xs mb-1">Эффекты:</div>
+                {currentParagraph.effects.map((e, i) => (
+                  <span key={i} className="text-sm mr-2">
+                    {formatEffect(e)}
+                  </span>
+                ))}
+              </div>
+            )}
+
+            {/* Keywords gained */}
+            {currentParagraph.keywords.length > 0 && (
+              <div className="mb-6 p-3 bg-frost-900/50 rounded border border-ice-900/50 animate-glow-pulse">
+                <div className="text-ice-500 text-xs mb-1">Ключевые слова записаны:</div>
+                {currentParagraph.keywords.map((kw, i) => (
+                  <span key={i} className="text-ice-300 text-sm mr-3">«{kw}»</span>
+                ))}
+              </div>
+            )}
+
+            {/* 10A.10 — Snowflake divider */}
+            {availableChoices.length > 0 && <SnowflakeDivider />}
+
+            {/* 10A.9 — Choice cards instead of plain buttons */}
+            {availableChoices.length > 0 && (
+              <div className="space-y-3" ref={choicesRef}>
+                {availableChoices.map((choice, i) => {
+                  const isConditionalChoice = currentParagraph.conditionalChoices.some(cc =>
+                    cc.description === choice.description ||
+                    cc.successParagraph === choice.paragraph ||
+                    cc.hasParagraph === choice.paragraph
+                  );
+                  const choiceType = inferChoiceType(choice.description || '', isConditionalChoice);
+                  return (
+                    <ChoiceCard
+                      key={i}
+                      index={i}
+                      description={choice.description || `Перейти к параграфу ${choice.paragraph}`}
+                      type={choiceType}
+                      onClick={() => {
+                        playSound('click');
+                        goToParagraph(choice.paragraph, choice.description);
+                      }}
+                    />
+                  );
+                })}
+              </div>
+            )}
+
+            {/* No choices = dead end or stuck */}
+            {availableChoices.length === 0 && currentParagraph.text.length > 0 && (
+              <div className="mt-8 text-center">
+                <p className="text-frost-500 italic font-serif mb-3">
+                  {currentParagraph.effects.some(e => e.type === 'set_health') ? 'Ваша история окончена...' : 'Нет доступных путей дальше.'}
+                </p>
+                {history.length > 1 && (
+                  <button
+                    onClick={() => goBackInHistory(history.length - 2)}
+                    className="px-4 py-2 bg-frost-800 hover:bg-frost-700 text-frost-200 rounded-lg text-sm transition-colors"
+                    aria-label="Вернуться на шаг назад"
+                  >
+                    ↩️ Вернуться назад
+                  </button>
+                )}
+              </div>
+            )}
+
+            {/* Medkit button */}
+            {!readerMode && stats.medkits > 0 && stats.health < stats.maxHealth && (
               <button
-                key={i}
-                onClick={() => {
-                  playSound('click');
-                  goToParagraph(choice.paragraph, choice.description);
-                }}
-                className="w-full text-left px-4 py-3 sm:px-5 sm:py-4 bg-frost-900/60 hover:bg-ice-900/40 border border-frost-800 hover:border-ice-700 rounded-lg transition-all duration-200 group choice-btn focus:outline-none focus:ring-2 focus:ring-ice-600 focus:ring-offset-2 focus:ring-offset-frost-950"
-                data-choice-index={i}
-                aria-label={`Выбор: ${choice.description || `Перейти к параграфу ${choice.paragraph}`}`}
+                onClick={useMedkit}
+                className="mt-6 w-full px-4 py-3 bg-success/10 hover:bg-success/20 border border-success/30 text-success rounded-lg transition-colors text-sm"
+                aria-label={`Использовать аптечку: +${gameData.metadata.medkitHeal} здоровья, осталось ${stats.medkits}`}
               >
-                <span className="text-frost-300 group-hover:text-ice-200 text-base sm:text-lg font-serif">
-                  {choice.description || `Перейти к параграфу ${choice.paragraph}`}
-                </span>
-              </button>
-            ))}
-          </div>
-        )}
-
-        {/* No choices = dead end or stuck - show back button */}
-        {availableChoices.length === 0 && currentParagraph.text.length > 0 && (
-          <div className="mt-8 text-center">
-            <p className="text-frost-500 italic font-serif mb-3">
-              {currentParagraph.effects.some(e => e.type === 'set_health') ? 'Ваша история окончена...' : 'Нет доступных путей дальше.'}
-            </p>
-            {history.length > 1 && (
-              <button
-                onClick={() => goBackInHistory(history.length - 2)}
-                className="px-4 py-2 bg-frost-800 hover:bg-frost-700 text-frost-200 rounded-lg text-sm transition-colors"
-                aria-label="Вернуться на шаг назад"
-              >
-                ↩️ Вернуться назад
+                Использовать аптечку (+{gameData.metadata.medkitHeal} здоровья) • Осталось: {stats.medkits} {formatMedkits(stats.medkits)}
               </button>
             )}
+
+            {/* 10A.8 — On mobile, keywords panel goes into bottom sheet instead */}
+            {!readerMode && (
+              <div className="hidden lg:block">
+                <KeywordsPanel />
+              </div>
+            )}
+
+            {/* 10A.7 — Bottom toolbar replaced with inline buttons (non-FAB items) */}
+            <div className="mt-8 flex items-center justify-between flex-wrap gap-2 lg:hidden">
+              <div className="flex items-center gap-3 flex-wrap">
+                <JournalButton onClick={() => setJournalOpen(true)} />
+                <MapButton onClick={() => setMapOpen(true)} />
+                <QuickSaveButton onClick={() => setSaveOpen(true)} />
+                <button
+                  onClick={() => setAchievementsOpen(true)}
+                  className="text-frost-500 hover:text-frost-300 text-sm transition-colors flex items-center gap-2"
+                  aria-label="Достижения"
+                >
+                  <span>🏆</span>
+                  <span>Ачивки</span>
+                </button>
+              </div>
+              <button
+                onClick={resetGame}
+                className="text-frost-700 hover:text-frost-500 text-xs transition-colors"
+                aria-label="Начать заново"
+              >
+                Начать заново
+              </button>
+            </div>
           </div>
-        )}
 
-        {/* Medkit button */}
-        {!readerMode && stats.medkits > 0 && stats.health < stats.maxHealth && (
-          <button
-            onClick={useMedkit}
-            className="mt-6 w-full px-4 py-3 bg-success/10 hover:bg-success/20 border border-success/30 text-success rounded-lg transition-colors text-sm"
-            aria-label={`Использовать аптечку: +${gameData.metadata.medkitHeal} здоровья, осталось ${stats.medkits}`}
-          >
-            Использовать аптечку (+{gameData.metadata.medkitHeal} здоровья) • Осталось: {stats.medkits} {formatMedkits(stats.medkits)}
-          </button>
-        )}
+          {/* 10A.6 — Right sidebar on desktop (40%) */}
+          <div className="hidden lg:block lg:w-[40%]">
+            <div className="sticky top-16 space-y-4">
+              {/* Station map mini */}
+              <div className="p-3 bg-frost-900/40 rounded border border-frost-800/50">
+                <button
+                  onClick={() => setMapOpen(true)}
+                  className="text-frost-500 hover:text-frost-300 text-xs transition-colors flex items-center gap-2 mb-2"
+                  aria-label="Открыть карту станции"
+                >
+                  <span>🗺️</span>
+                  <span>Карта станции</span>
+                </button>
+                <div className="text-frost-600 text-xs">Нажмите для подробной карты</div>
+              </div>
 
-        {/* Keywords panel (collapsible) — hidden in reader mode */}
-        {!readerMode && <KeywordsPanel />}
+              {/* Keywords panel in sidebar */}
+              {!readerMode && <KeywordsPanel />}
 
-        {/* Journal + Map + Save + Achievements + Reset */}
-        <div className="mt-8 flex items-center justify-between flex-wrap gap-2">
-          <div className="flex items-center gap-3 flex-wrap">
-            <JournalButton onClick={() => setJournalOpen(true)} />
-            <MapButton onClick={() => setMapOpen(true)} />
-            <QuickSaveButton onClick={() => setSaveOpen(true)} />
-            <button
-              onClick={() => setAchievementsOpen(true)}
-              className="text-frost-500 hover:text-frost-300 text-sm transition-colors flex items-center gap-2"
-              aria-label="Достижения"
-            >
-              <span>🏆</span>
-              <span>Ачивки</span>
-            </button>
+              {/* Effects panel in sidebar */}
+              {!readerMode && currentParagraph.effects.length > 0 && (
+                <div className="p-3 bg-frost-900/40 rounded border border-frost-800/50">
+                  <div className="text-frost-500 text-xs mb-1">Эффекты параграфа:</div>
+                  {currentParagraph.effects.map((e, i) => (
+                    <span key={i} className="text-sm mr-2">{formatEffect(e)}</span>
+                  ))}
+                </div>
+              )}
+
+              {/* 10A.13 — Station breathing indicator */}
+              <div className="p-3 bg-frost-900/40 rounded border border-frost-800/50 station-breathe">
+                <div className="text-frost-600 text-xs">Станция Ледхом</div>
+                <div className="text-frost-500 text-xs mt-1">Температура за бортом: −30°C</div>
+              </div>
+
+              {/* Quick actions in sidebar */}
+              <div className="flex flex-wrap gap-2">
+                <button
+                  onClick={() => setJournalOpen(true)}
+                  className="text-frost-500 hover:text-frost-300 text-xs transition-colors flex items-center gap-1 px-2 py-1 rounded hover:bg-frost-900/50"
+                >
+                  📜 Журнал
+                </button>
+                <button
+                  onClick={() => setSaveOpen(true)}
+                  className="text-frost-500 hover:text-frost-300 text-xs transition-colors flex items-center gap-1 px-2 py-1 rounded hover:bg-frost-900/50"
+                >
+                  💾 Сохранить
+                </button>
+                <button
+                  onClick={() => setAchievementsOpen(true)}
+                  className="text-frost-500 hover:text-frost-300 text-xs transition-colors flex items-center gap-1 px-2 py-1 rounded hover:bg-frost-900/50"
+                >
+                  🏆 Ачивки
+                </button>
+                <button
+                  onClick={resetGame}
+                  className="text-frost-700 hover:text-frost-500 text-xs transition-colors flex items-center gap-1 px-2 py-1 rounded hover:bg-frost-900/50"
+                >
+                  🔄 Заново
+                </button>
+              </div>
+            </div>
           </div>
-          <button
-            onClick={resetGame}
-            className="text-frost-700 hover:text-frost-500 text-xs transition-colors"
-            aria-label="Начать заново"
-          >
-            Начать заново
-          </button>
         </div>
       </div>
+
+      {/* 10A.7 — Floating Action Button (mobile) */}
+      <div className="lg:hidden">
+        <FloatingActionButton
+          items={[
+            { icon: '📜', label: 'Журнал', onClick: () => setJournalOpen(true), badge: history.length || undefined },
+            { icon: '🗺️', label: 'Карта', onClick: () => setMapOpen(true) },
+            { icon: '💾', label: 'Сохранить', onClick: () => setSaveOpen(true) },
+            { icon: '🏆', label: 'Ачивки', onClick: () => setAchievementsOpen(true) },
+            { icon: '🔊', label: 'Озвучить', onClick: () => {}, active: false },
+          ]}
+        />
+      </div>
+
+      {/* 10A.8 — Bottom sheet for keywords on mobile */}
+      <BottomSheet
+        isOpen={keywordsSheetOpen}
+        onClose={() => setKeywordsSheetOpen(false)}
+        title="Ключевые слова и эффекты"
+      >
+        {!readerMode && <KeywordsPanel />}
+        {!readerMode && currentParagraph.effects.length > 0 && (
+          <div className="mt-3">
+            <div className="text-frost-500 text-xs mb-1">Эффекты:</div>
+            {currentParagraph.effects.map((e, i) => (
+              <span key={i} className="text-sm mr-2">{formatEffect(e)}</span>
+            ))}
+          </div>
+        )}
+      </BottomSheet>
 
       {/* Modals (lazy-loaded) */}
       {journalOpen && (
@@ -484,7 +623,7 @@ function DeathScreen() {
       {/* Main content */}
       <div className="relative z-10 flex flex-col items-center text-center">
         <div className="text-5xl sm:text-6xl mb-4">💀</div>
-        <h2 className="text-3xl sm:text-4xl font-serif font-bold text-danger mb-4 death-flicker">
+        <h2 className="text-3xl sm:text-4xl font-display font-bold text-danger mb-4 death-flicker">
           ВЫ ПОГИБЛИ
         </h2>
         <div className={`transition-all duration-700 ${showStats ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`}>
@@ -601,7 +740,7 @@ function VictoryScreen() {
 
       <div className="relative z-10 text-center">
         <div className="text-5xl sm:text-6xl mb-4 animate-bounce">❄️</div>
-        <h2 className="text-3xl sm:text-4xl font-serif font-bold text-ice-200 mb-4" style={{ textShadow: '0 0 30px rgba(56, 189, 248, 0.3)' }}>
+        <h2 className="text-3xl sm:text-4xl font-display font-bold text-ice-200 mb-4" style={{ textShadow: '0 0 30px rgba(56, 189, 248, 0.3)' }}>
           Победа!
         </h2>
 

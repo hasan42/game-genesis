@@ -30,7 +30,7 @@ export function PrologueScreen() {
         </div>
 
         {/* Section title */}
-        <h2 className="text-xl sm:text-2xl md:text-3xl font-serif font-bold text-ice-200 mb-4 sm:mb-6 text-center">
+        <h2 className="text-xl sm:text-2xl md:text-3xl font-display font-bold text-ice-200 mb-4 sm:mb-6 text-center">
           {section.title}
         </h2>
 

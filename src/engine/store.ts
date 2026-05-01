@@ -93,6 +93,7 @@ export const useGameStore = create<GameState>((set, get) => ({
   phase: 'title',
   gameStartTime: null,
   readerMode: false,
+  gameHour: 8, // 10Б.3 — Start at 8:00 AM
 
   setPhase: (phase) => set({ phase }),
 
@@ -113,6 +114,7 @@ export const useGameStore = create<GameState>((set, get) => ({
       keywords: [],
       history: [],
       gameStartTime: Date.now(),
+      gameHour: 8, // 10Б.3
     });
   },
 
@@ -145,6 +147,7 @@ export const useGameStore = create<GameState>((set, get) => ({
         keywords: newKeywords,
         history: [...history, newHistory],
         phase: 'dead',
+        gameHour: get().gameHour + 1, // 10Б.3
       });
       return;
     }
@@ -157,6 +160,7 @@ export const useGameStore = create<GameState>((set, get) => ({
         keywords: newKeywords,
         history: [...history, newHistory],
         phase: 'victory',
+        gameHour: get().gameHour + 1, // 10Б.3
       });
       return;
     }
@@ -167,6 +171,7 @@ export const useGameStore = create<GameState>((set, get) => ({
       keywords: newKeywords,
       history: [...history, newHistory],
       phase: 'playing',
+      gameHour: get().gameHour + 1, // 10Б.3
     });
 
     // Auto-save
@@ -195,6 +200,7 @@ export const useGameStore = create<GameState>((set, get) => ({
       keywords: entry.keywordsSnapshot ? entry.keywordsSnapshot.map(k => ({ ...k })) : get().keywords,
       history: newHistory,
       phase: 'playing',
+      gameHour: 8 + newHistory.length, // 10Б.3 — recalculate from history
     });
     
     // Auto-save
@@ -230,6 +236,7 @@ export const useGameStore = create<GameState>((set, get) => ({
       phase: 'title',
       gameStartTime: null,
       readerMode: false,
+      gameHour: 8, // 10Б.3
     });
     try { localStorage.removeItem(STORAGE_KEY); } catch {}
   },
@@ -246,6 +253,7 @@ export const useGameStore = create<GameState>((set, get) => ({
         history: parsed.history,
         phase: 'playing',
         gameStartTime: parsed.gameStartTime || null,
+        gameHour: parsed.gameHour || 8 + (parsed.history?.length || 0), // 10Б.3
       });
       return true;
     } catch {
