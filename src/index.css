@@ -202,22 +202,76 @@
 /* 9.1 Drop cap (буквица) */
 .drop-cap::first-letter {
   float: left;
-  font-size: 3.5em;
-  line-height: 0.8;
-  padding-right: 0.08em;
-  padding-top: 0.05em;
+  font-size: 4em;
+  line-height: 0.75;
+  padding-right: 0.1em;
+  padding-top: 0.04em;
   color: #7dd3fc; /* ice-300 */
-  text-shadow: 0 0 20px rgba(56, 189, 248, 0.5), 0 0 40px rgba(56, 189, 248, 0.2);
+  text-shadow: 0 0 20px rgba(56, 189, 248, 0.5), 0 0 40px rgba(56, 189, 248, 0.2), 0 2px 4px rgba(0,0,0,0.3);
   font-weight: bold;
+  font-family: var(--font-display);
 }
 
-/* 9.2 Character quote / dialogue style */
+/* 9.2 Character quote / dialogue style (enhanced in 9.3) */
 .quote-line {
   border-left: 3px solid #0ea5e9; /* ice-500 */
   padding-left: 1rem;
   margin-left: 0.5rem;
   color: #7dd3fc; /* ice-300 / text-frost-300 lighter */
   font-style: italic;
+}
+
+/* 9.3 — Paragraph title decorative styling */
+.paragraph-title {
+  position: relative;
+  display: inline-block;
+}
+.paragraph-title::after {
+  content: '';
+  position: absolute;
+  bottom: -4px;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(56, 189, 248, 0.4), transparent);
+}
+
+/* 9.3 — Character quote block (enhanced) */
+.quote-block {
+  border-left: 3px solid #0ea5e9;
+  padding: 0.75rem 1rem;
+  margin: 0.75rem 0;
+  margin-left: 0.5rem;
+  color: #bae6fd;
+  font-style: italic;
+  background: linear-gradient(90deg, rgba(14, 165, 233, 0.08), transparent);
+  border-radius: 0 6px 6px 0;
+  position: relative;
+}
+.quote-block::before {
+  content: '\00AB';
+  position: absolute;
+  left: -0.5rem;
+  top: -0.25rem;
+  font-size: 1.5rem;
+  color: rgba(56, 189, 248, 0.3);
+  font-style: normal;
+  font-family: var(--font-display);
+}
+
+/* 9.3 — Keyword highlight (enhanced) */
+.keyword-highlight {
+  color: #7dd3fc;
+  background: linear-gradient(135deg, rgba(56, 189, 248, 0.15), rgba(56, 189, 248, 0.08));
+  border-radius: 3px;
+  padding: 1px 4px;
+  border-bottom: 1px solid rgba(56, 189, 248, 0.3);
+  transition: all 0.2s ease;
+  cursor: default;
+}
+.keyword-highlight:hover {
+  background: linear-gradient(135deg, rgba(56, 189, 248, 0.25), rgba(56, 189, 248, 0.15));
+  border-bottom-color: rgba(56, 189, 248, 0.5);
 }
 
 /* 9.5 Death screen — cracking ice overlay */

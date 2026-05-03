@@ -285,7 +285,7 @@ export function GameScreen() {
             {/* Tutorial hint */}
             {activeTutorial && !readerMode && <TutorialTooltip hintId={activeTutorial} />}
 
-            {/* 10A.12 — Paragraph header with display font */}
+            {/* 9.3 — Paragraph header with decorative styling */}
             <div className="text-center mb-4 paragraph-header-enter" key={`header-${currentParagraph.id}`}>
               <span
                 className="font-mono text-lg sm:text-xl font-bold"
@@ -294,7 +294,7 @@ export function GameScreen() {
                 ¶ {currentParagraph.id}
               </span>
               {currentParagraph.title && (
-                <span className="ml-2 text-ice-400 font-display text-base sm:text-lg">{currentParagraph.title}</span>
+                <span className="paragraph-title ml-2 text-ice-400 font-display text-base sm:text-lg">{currentParagraph.title}</span>
               )}
             </div>
 
@@ -313,7 +313,7 @@ export function GameScreen() {
                   const lineContent = line.fragments.map((frag, fi) => {
                     if (frag.isKeyword) {
                       return (
-                        <span key={fi} className="bg-ice-500/20 text-ice-300 rounded px-1">
+                        <span key={fi} className="keyword-highlight">
                           {frag.text}
                         </span>
                       );
@@ -345,7 +345,7 @@ export function GameScreen() {
                       key={i}
                       className={`leading-relaxed text-base sm:text-lg font-serif ${
                         line.isQuote
-                          ? 'border-l-3 border-l-ice-500 pl-4 ml-2 italic text-ice-300'
+                          ? 'quote-block'
                           : 'text-frost-200'
                       } ${line.hasDropCap ? 'drop-cap' : ''}`}
                     >
