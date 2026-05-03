@@ -1,12 +1,10 @@
-import { useState, useEffect, useRef, useMemo, useCallback, lazy, Suspense } from 'react';
+import { useState, useEffect, useRef, useCallback, lazy, Suspense } from 'react';
 import { useGameStore, useCurrentParagraph, gameData } from '../engine/store';
 import type { Choice, ConditionalChoice, GameStats, KeywordRecord } from '../engine/types';
 import {
   checkAndUnlockAchievements,
   saveReachedEnding,
-  getReachedEndings,
   ENDING_PARAGRAPH_IDS,
-  getUnlockedAchievements,
 } from '../engine/achievements';
 import type { AchievementContext } from '../engine/achievements';
 import { PARAGRAPH_LOCATION_MAP, getVisitedLocations as getVisitedLocationsFromData } from '../engine/locations';
@@ -34,6 +32,9 @@ import { FloatingActionButton } from './FloatingActionButton';
 import { BottomSheet } from './BottomSheet';
 import { FootnoteTooltip, findLoreTerms } from './FootnoteTooltip';
 import { ReferenceModal } from './ReferenceModal';
+import { DeathScreen } from './DeathScreen';
+import { VictoryScreen } from './VictoryScreen';
+import { EndingUnlock } from './EndingUnlock';
 
 // Lazy-loaded heavy modals — reduces initial bundle size
 const JournalModal = lazy(() => import('./JournalModal').then(m => ({ default: m.JournalModal })));
@@ -217,12 +218,39 @@ export function GameScreen() {
     setLocationTransition(null);
   }, []);
 
+  // 9.6 — Track new ending for notification
+  const [showEndingUnlock, setShowEndingUnlock] = useState(false);
+  const [endingUnlockName, setEndingUnlockName] = useState<string | undefined>();
+  useEffect(() => {
+    if (phase === 'victory' && currentParagraph && ENDING_PARAGRAPH_IDS.includes(currentParagraph.id)) {
+      // Check if this ending was just reached (it's in localStorage now from the save)
+      // Show notification for any victory that's an ending
+      setShowEndingUnlock(true);
+      // Try to get a name for the ending — use paragraph title if available
+      setEndingUnlockName(currentParagraph.title || undefined);
+    }
+  }, [phase, currentParagraph?.id]);
+
   if (phase === 'dead') {
-    return <DeathScreen />;
+    return (
+      <>
+        <DeathScreen />
+      </>
+    );
   }
 
   if (phase === 'victory') {
-    return <VictoryScreen />;
+    return (
+      <>
+        <VictoryScreen />
+        {showEndingUnlock && (
+          <EndingUnlock
+            endingName={endingUnlockName}
+            onDismiss={() => setShowEndingUnlock(false)}
+          />
+        )}
+      </>
+    );
   }
 
   if (!currentParagraph) {
@@ -625,289 +653,6 @@ export function GameScreen() {
           onComplete={handleLocationTransitionComplete}
         />
       )}
-    </div>
-  );
-}
-
-function DeathScreen() {
-  const resetGame = useGameStore(s => s.resetGame);
-  const history = useGameStore(s => s.history);
-  const [showStats, setShowStats] = useState(false);
-
-  // 9.5 — Delayed stats (2 sec)
-  useEffect(() => {
-    const timer = setTimeout(() => setShowStats(true), 2000);
-    return () => clearTimeout(timer);
-  }, []);
-
-  return (
-    <div className="min-h-screen flex flex-col items-center justify-center bg-frost-950 text-frost-100 px-4 relative overflow-hidden">
-      <DynamicBackground />
-      <HealthVignette />
-
-      {/* 9.5 — Crack overlay (ice cracking effect) */}
-      <div className="absolute inset-0 z-[2] pointer-events-none crack-overlay">
-        {/* Diagonal crack lines */}
-        <svg className="absolute inset-0 w-full h-full" viewBox="0 0 800 600" preserveAspectRatio="none">
-          <line x1="200" y1="0" x2="350" y2="250" stroke="rgba(239,68,68,0.3)" strokeWidth="2" />
-          <line x1="350" y1="250" x2="280" y2="400" stroke="rgba(239,68,68,0.25)" strokeWidth="1.5" />
-          <line x1="350" y1="250" x2="500" y2="350" stroke="rgba(239,68,68,0.2)" strokeWidth="1" />
-          <line x1="550" y1="0" x2="480" y2="180" stroke="rgba(239,68,68,0.25)" strokeWidth="1.5" />
-          <line x1="480" y1="180" x2="600" y2="400" stroke="rgba(239,68,68,0.2)" strokeWidth="1" />
-          <line x1="480" y1="180" x2="420" y2="300" stroke="rgba(239,68,68,0.15)" strokeWidth="1" />
-          <line x1="100" y1="400" x2="250" y2="600" stroke="rgba(239,68,68,0.15)" strokeWidth="1" />
-          <line x1="600" y1="350" x2="700" y2="600" stroke="rgba(239,68,68,0.15)" strokeWidth="1" />
-        </svg>
-      </div>
-
-      {/* 9.5 — Red tint overlay */}
-      <div className="absolute inset-0 z-[1] pointer-events-none bg-danger/20" />
-
-      {/* Main content */}
-      <div className="relative z-10 flex flex-col items-center text-center">
-        <div className="text-5xl sm:text-6xl mb-4">💀</div>
-        <h2 className="text-3xl sm:text-4xl font-display font-bold text-danger mb-4 death-flicker">
-          ВЫ ПОГИБЛИ
-        </h2>
-        <div className={`transition-all duration-700 ${showStats ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`}>
-          <p className="text-frost-400 mb-2 text-sm sm:text-base">Здоровье упало до нуля.</p>
-          <p className="text-frost-500 text-xs sm:text-sm mb-6 sm:mb-8">Пройдено параграфов: {history.length}</p>
-
-          <button
-            onClick={resetGame}
-            className="px-6 sm:px-8 py-3 bg-ice-800 hover:bg-ice-700 text-ice-100 rounded-lg text-base sm:text-lg transition-all duration-300"
-            aria-label="Начать заново"
-          >
-            Начать заново
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function VictoryScreen() {
-  const resetGame = useGameStore(s => s.resetGame);
-  const history = useGameStore(s => s.history);
-  const gameStartTime = useGameStore(s => s.gameStartTime);
-  const currentParagraph = useCurrentParagraph();
-  const [achievementsOpen, setAchievementsOpen] = useState(false);
-  const [newEnding, setNewEnding] = useState(false);
-
-  // 9.6 — Snowflake/confetti particles
-  const particles = useMemo(() => {
-    return Array.from({ length: 30 }, (_, i) => ({
-      id: i,
-      left: Math.random() * 100,
-      delay: Math.random() * 5,
-      duration: 4 + Math.random() * 6,
-      size: 4 + Math.random() * 8,
-      type: Math.random() > 0.5 ? '❄' : '✦',
-    }));
-  }, []);
-
-  // Statistics
-  const paragraphsVisited = new Set(history.map(h => h.paragraphId)).size;
-  const totalParagraphs = gameData.paragraphs.length;
-  const explorationPct = totalParagraphs > 0 ? Math.round((paragraphsVisited / totalParagraphs) * 100) : 0;
-  
-  const bestHealth = Math.max(...history.map(h => h.statsSnapshot?.health ?? 0));
-  const bestAura = Math.max(...history.map(h => h.statsSnapshot?.aura ?? 0));
-  const bestAgility = Math.max(...history.map(h => h.statsSnapshot?.agility ?? 0));
-  const bestMelee = Math.max(...history.map(h => h.statsSnapshot?.melee ?? 0));
-  const bestStealth = Math.max(...history.map(h => h.statsSnapshot?.stealth ?? 0));
-
-  const playTimeMs = gameStartTime ? Date.now() - gameStartTime : 0;
-  const playMinutes = Math.floor(playTimeMs / 60000);
-  const playHours = Math.floor(playMinutes / 60);
-  const playTimeStr = playHours > 0
-    ? `${playHours}ч ${playMinutes % 60}мин`
-    : `${playMinutes} мин`;
-
-  // Endings tracking
-  const reachedEndings = getReachedEndings();
-  const totalEndings = ENDING_PARAGRAPH_IDS.length;
-  const endingsCount = reachedEndings.size;
-
-  // 9.6 — Check if this is a new ending
-  useEffect(() => {
-    if (currentParagraph && ENDING_PARAGRAPH_IDS.includes(currentParagraph.id)) {
-      // This ending was just saved — check if it's newly reached
-      setNewEnding(true);
-    }
-  }, [currentParagraph?.id]);
-
-  // Achievements
-  const unlockedAchievements = getUnlockedAchievements();
-
-  // Hint for endings
-  const endingsHint = endingsCount === 1
-    ? 'Попробуйте другие выборы, чтобы найти другие концовки!'
-    : endingsCount < Math.floor(totalEndings / 2)
-    ? 'Есть ещё неизведанные пути...'
-    : null;
-
-  // 9.6 — Animated stat bar data
-  const statBars = useMemo(() => [
-    { label: 'Здоровье', value: bestHealth, max: 40, icon: '❤️', color: 'from-red-500 to-red-400' },
-    { label: 'Аура', value: bestAura, max: 20, icon: '🔮', color: 'from-amber-500 to-amber-400' },
-    { label: 'Ловкость', value: bestAgility, max: 10, icon: '⚡', color: 'from-yellow-500 to-yellow-400' },
-    { label: 'Холодное оружие', value: bestMelee, max: 10, icon: '⚔️', color: 'from-orange-500 to-orange-400' },
-    { label: 'Стелс', value: bestStealth, max: 10, icon: '👁️', color: 'from-purple-500 to-purple-400' },
-  ], [bestHealth, bestAura, bestAgility, bestMelee, bestStealth]);
-
-  return (
-    <div className="min-h-screen flex flex-col items-center justify-center bg-frost-950 text-frost-100 px-4 relative overflow-hidden">
-      <DynamicBackground />
-      <ToastContainer />
-
-      {/* 9.6 — Victory particles (snowflakes + sparkle) */}
-      <div className="absolute inset-0 pointer-events-none z-0">
-        {particles.map(p => (
-          <div
-            key={p.id}
-            className="victory-particle"
-            style={{
-              left: `${p.left}%`,
-              animationDelay: `${p.delay}s`,
-              animationDuration: `${p.duration}s`,
-              fontSize: `${p.size}px`,
-              color: p.type === '❄' ? '#bae6fd' : '#fbbf24',
-              textShadow: '0 0 4px rgba(56, 189, 248, 0.5)',
-            }}
-          >
-            {p.type}
-          </div>
-        ))}
-      </div>
-
-      <div className="relative z-10 text-center">
-        <div className="text-5xl sm:text-6xl mb-4 animate-bounce">❄️</div>
-        <h2 className="text-3xl sm:text-4xl font-display font-bold text-ice-200 mb-4" style={{ textShadow: '0 0 30px rgba(56, 189, 248, 0.3)' }}>
-          Победа!
-        </h2>
-
-        {/* 9.6 — New ending unlocked effect */}
-        {newEnding && (
-          <div className="mb-4 px-4 py-2 bg-ice-900/40 border border-ice-500/40 rounded-lg inline-flex items-center gap-2 animate-glow-pulse">
-            <span className="text-lg">🔓</span>
-            <span className="text-ice-200 text-sm font-serif">Новая концовка разблокирована!</span>
-          </div>
-        )}
-
-        {currentParagraph && (
-          <div className="max-w-md text-center mb-6">
-            {currentParagraph.text.map((line, i) => (
-              <p key={i} className="text-frost-300 leading-relaxed font-serif mb-3">{line}</p>
-            ))}
-          </div>
-        )}
-        
-        {/* 9.6 — Statistics block with animated stat bars */}
-        <div className="bg-frost-900/50 border border-frost-800 rounded-xl p-4 sm:p-6 mb-4 max-w-sm w-full">
-          <h3 className="text-ice-300 font-serif text-sm font-bold mb-3 text-center">📊 Статистика прохождения</h3>
-          <div className="grid grid-cols-2 gap-3 text-center mb-3">
-            <div>
-              <div className="text-ice-200 text-xl font-bold">{history.length}</div>
-              <div className="text-frost-500 text-xs">Шагов</div>
-            </div>
-            <div>
-              <div className="text-ice-200 text-xl font-bold">{paragraphsVisited}/{totalParagraphs}</div>
-              <div className="text-frost-500 text-xs">Параграфов ({explorationPct}%)</div>
-            </div>
-            <div>
-              <div className="text-ice-200 text-xl font-bold">{playTimeStr}</div>
-              <div className="text-frost-500 text-xs">Время игры</div>
-            </div>
-            <div>
-              <div className="text-ice-200 text-xl font-bold">❤️{bestHealth}</div>
-              <div className="text-frost-500 text-xs">Макс. здоровье</div>
-            </div>
-          </div>
-
-          {/* 9.6 — Animated stat bars */}
-          <div className="border-t border-frost-800 pt-3 space-y-2">
-            <div className="text-frost-500 text-xs mb-2 text-center">Лучшие параметры за игру</div>
-            {statBars.map((bar, i) => (
-              <div key={i} className="flex items-center gap-2">
-                <span className="text-sm w-6 text-center">{bar.icon}</span>
-                <span className="text-frost-400 text-xs w-24 text-left">{bar.label}</span>
-                <div className="flex-1 h-2 bg-frost-800 rounded-full overflow-hidden">
-                  <div
-                    className={`h-full bg-gradient-to-r ${bar.color} rounded-full stat-bar-animate`}
-                    style={{
-                      width: `${bar.max > 0 ? Math.min(100, Math.round((bar.value / bar.max) * 100)) : 0}%`,
-                      animationDelay: `${i * 0.2}s`,
-                    }}
-                  />
-                </div>
-                <span className="text-frost-300 text-xs w-8 text-right">{bar.value}</span>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* Endings tracking */}
-        <div className="bg-frost-900/50 border border-frost-800 rounded-xl p-4 sm:p-6 mb-4 max-w-sm w-full">
-          <h3 className="text-ice-300 font-serif text-sm font-bold mb-2 text-center">🔚 Концовки</h3>
-          <div className="text-center">
-            <div className="text-ice-200 text-xl font-bold">{endingsCount} из {totalEndings}</div>
-            <div className="text-frost-500 text-xs mt-1">Найдено концовок</div>
-            {/* Progress bar for endings */}
-            <div className="mt-2 h-1.5 bg-frost-800 rounded-full overflow-hidden">
-              <div
-                className="h-full bg-gradient-to-r from-ice-700 to-ice-400 rounded-full stat-bar-animate"
-                style={{ width: `${totalEndings > 0 ? Math.round((endingsCount / totalEndings) * 100) : 0}%` }}
-              />
-            </div>
-            {endingsHint && (
-              <div className="text-frost-400 text-xs mt-2 italic">💡 {endingsHint}</div>
-            )}
-          </div>
-        </div>
-
-        {/* Achievements on victory screen */}
-        {unlockedAchievements.size > 0 && (
-          <div className="bg-frost-900/50 border border-frost-800 rounded-xl p-4 sm:p-6 mb-4 max-w-sm w-full">
-            <h3 className="text-ice-300 font-serif text-sm font-bold mb-2 text-center">🏆 Достижения ({unlockedAchievements.size})</h3>
-            <div className="flex justify-center gap-2 flex-wrap">
-              {[...unlockedAchievements].map(id => {
-                const a = [
-                  { id: 'explorer', icon: '🗺️', name: 'Исследователь' },
-                  { id: 'conqueror', icon: '👑', name: 'Покоритель' },
-                  { id: 'peacemaker', icon: '🕊️', name: 'Миротворец' },
-                  { id: 'warrior', icon: '⚔️', name: 'Воин' },
-                  { id: 'speedrun', icon: '⚡', name: 'Скоростной бег' },
-                  { id: 'discoverer', icon: '🧭', name: 'Первооткрыватель' },
-                  { id: 'survivor', icon: '💀', name: 'Выживший' },
-                  { id: 'healer', icon: '✨', name: 'Целитель' },
-                ].find(x => x.id === id);
-                return a ? (
-                  <span key={id} className="text-2xl" title={a.name}>{a.icon}</span>
-                ) : null;
-              })}
-            </div>
-            <div className="text-center mt-2">
-              <button
-                onClick={() => setAchievementsOpen(true)}
-                className="text-frost-500 hover:text-frost-300 text-xs transition-colors"
-              >
-                Все ачивки →
-              </button>
-            </div>
-          </div>
-        )}
-        
-        <button
-          onClick={resetGame}
-          className="px-6 sm:px-8 py-3 bg-ice-800 hover:bg-ice-700 text-ice-100 rounded-lg text-base sm:text-lg transition-all duration-300"
-          aria-label="Начать заново"
-        >
-          Начать заново
-        </button>
-
-        {achievementsOpen && <AchievementsModal onClose={() => setAchievementsOpen(false)} />}
-      </div>
     </div>
   );
 }
