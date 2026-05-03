@@ -5,7 +5,7 @@
  */
 
 import { useEffect, useState, useMemo } from 'react';
-import { PARAGRAPH_LOCATION_MAP } from '../engine/achievements';
+import { getLocationForParagraph as getLocForParagraph } from '../engine/locations';
 
 type LocationId = 'residential' | 'warehouse' | 'command' | 'workshop' | 'spaceport' | 'mine';
 
@@ -36,13 +36,10 @@ const LOCATION_ICONS: Record<LocationId, string> = {
   mine: '⛏️',
 };
 
+// Use canonical location lookup from locations.ts (Stage 9.4)
 function getLocationForParagraph(paragraphId: number): LocationId | null {
-  for (const [locId, ids] of Object.entries(PARAGRAPH_LOCATION_MAP)) {
-    if (ids.includes(paragraphId)) {
-      return locId as LocationId;
-    }
-  }
-  return null;
+  const loc = getLocForParagraph(paragraphId);
+  return loc as LocationId | null;
 }
 
 interface LocationTransitionProps {

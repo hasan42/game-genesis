@@ -6,7 +6,7 @@
 
 import { useMemo } from 'react';
 import { useGameStore } from '../engine/store';
-import { PARAGRAPH_LOCATION_MAP } from '../engine/achievements';
+import { PARAGRAPH_LOCATION_MAP } from '../engine/locations';
 
 function shouldShowScanlines(paragraphId: number): boolean {
   return PARAGRAPH_LOCATION_MAP.mine?.includes(paragraphId) ?? false;

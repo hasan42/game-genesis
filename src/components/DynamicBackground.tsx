@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useGameStore } from '../engine/store';
-import { PARAGRAPH_LOCATION_MAP } from '../engine/achievements';
+import { PARAGRAPH_LOCATION_MAP } from '../engine/locations';
 
 type LocationTheme = 'residential' | 'warehouse' | 'command' | 'workshop' | 'spaceport' | 'mine' | 'default';
 
