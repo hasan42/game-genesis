@@ -43,20 +43,20 @@ curl -sL -o output.jpg "https://image.pollinations.ai/prompt/ENCODED_PROMPT?widt
 | station-interior | `Dark sci-fi concept art: interior of a research station on an ice planet, metal corridors with flickering lights, emergency red alarms, frost on walls, abandoned medical bay, cinematic, no text no watermark` |
 | blizzard-surface | `Dark sci-fi concept art: a person walking through a violent blizzard on an ice planet, barely visible figure in heavy winter gear, snow and ice particles flying, zero visibility, dramatic cold blue tones, cinematic, no text no watermark` |
 
-### Дополнительные сцены (можно сгенерировать)
+### Дополнительные сцены (сгенерированы ✅)
 
 | Файл | Промпт | Параграфы |
 |------|--------|-----------|
-| medical-bay | `Dark sci-fi concept art: abandoned medical bay on an ice planet station, broken medical equipment, scattered medicine vials, flickering fluorescent lights, blood stains on floor, cold blue and red tones, cinematic, no text no watermark` | 7, 38, 52 |
-| command-center | `Dark sci-fi concept art: command center of an ice planet research station, holographic displays flickering, captain chair empty, snow visible through reinforced windows, red alert lights, cinematic, no text no watermark` | 34, 35, 102 |
-| trap-phoenixoid | `Dark sci-fi concept art: a trap set for an alien creature in an ice station, bait in a flooded basin area, heavy metal doors ready to close, tension and danger, cold blue and red emergency lights, cinematic, no text no watermark` | 27, 76 |
-| characters-group | `Dark sci-fi character lineup concept art: six people in cold weather gear at an ice planet station, diverse ages and builds, tense expressions, dim emergency lighting, cold blue tones, cinematic, no text no watermark` | 3, 4 |
-| glider-vehicle | `Dark sci-fi concept art: a hover glider vehicle parked on an ice planet surface, sleek design with ice crystals forming on hull, blizzard in background, cold blue and white tones, cinematic, no text no watermark` | 58, 114 |
-| ice-crevasse | `Dark sci-fi concept art: a deep ice crevasse on an alien frozen planet, dangerous narrow bridge of ice, blue crystalline walls descending into darkness, a figure carefully crossing, cinematic, no text no watermark` | 150, 173 |
-| t-field-barrier | `Dark sci-fi concept art: an invisible force field barrier shimmering with faint blue light on a frozen ice planet, energy distortion in the air, snow particles being deflected, mysterious and alien technology, cinematic, no text no watermark` | 1, 3 |
-| fight-corridor | `Dark sci-fi concept art: a fierce battle in a narrow ice station corridor, person with glowing sword fighting a terrifying alien creature, sparks and ice fragments flying, emergency red lights, cinematic, no text no watermark` | 6, 7 |
-| frozen-ruins | `Dark sci-fi concept art: ruins of an ancient alien civilization buried in ice on a frozen planet, mysterious crystalline structures partially uncovered, eerie blue glow from within, archaeologist examining, cinematic, no text no watermark` | 93, 133 |
-| spaceport-ship | `Dark sci-fi concept art: a small spacecraft inside a frozen hangar on an ice planet, ice crystals on the hull, dim emergency lighting, frost on cockpit windows, the only way off the planet, cinematic, no text no watermark` | 192, 198 |
+| medical-bay | ✅ | `Dark sci-fi concept art: abandoned medical bay on an ice planet station, broken medical equipment, scattered medicine vials, flickering fluorescent lights, blood stains on floor, cold blue and red tones, cinematic, no text no watermark` | 7, 38, 52 |
+| command-center | ✅ | `Dark sci-fi concept art: command center of an ice planet research station, holographic displays flickering, captain chair empty, snow visible through reinforced windows, red alert lights, cinematic, no text no watermark` | 34, 35, 102 |
+| trap-phoenixoid | ✅ | `Dark sci-fi concept art: a trap set for an alien creature in an ice station, bait in a flooded basin area, heavy metal doors ready to close, tension and danger, cold blue and red emergency lights, cinematic, no text no watermark` | 27, 76 |
+| characters-group | ✅ | `Dark sci-fi character lineup concept art: six people in cold weather gear at an ice planet station, diverse ages and builds, tense expressions, dim emergency lighting, cold blue tones, cinematic, no text no watermark` | 3, 4 |
+| glider-vehicle | ✅ | `Dark sci-fi concept art: a hover glider vehicle parked on an ice planet surface, sleek design with ice crystals forming on hull, blizzard in background, cold blue and white tones, cinematic, no text no watermark` | 58, 114 |
+| ice-crevasse | ✅ | `Dark sci-fi concept art: a deep ice crevasse on an alien frozen planet, dangerous narrow bridge of ice, blue crystalline walls descending into darkness, a figure carefully crossing, cinematic, no text no watermark` | 150, 173 |
+| t-field-barrier | ✅ | `Dark sci-fi concept art: an invisible force field barrier shimmering with faint blue light on a frozen ice planet, energy distortion in the air, snow particles being deflected, mysterious and alien technology, cinematic, no text no watermark` | 1, 3 |
+| fight-corridor | ✅ | `Dark sci-fi concept art: a fierce battle in a narrow ice station corridor, person with glowing sword fighting a terrifying alien creature, sparks and ice fragments flying, emergency red lights, cinematic, no text no watermark` | 6, 7 |
+| frozen-ruins | ✅ | `Dark sci-fi concept art: ruins of an ancient alien civilization buried in ice on a frozen planet, mysterious crystalline structures partially uncovered, eerie blue glow from within, archaeologist examining, cinematic, no text no watermark` | 93, 133 |
+| spaceport-ship | ✅ | `Dark sci-fi concept art: a small spacecraft inside a frozen hangar on an ice planet, ice crystals on the hull, dim emergency lighting, frost on cockpit windows, the only way off the planet, cinematic, no text no watermark` | 192, 198 |
 
 ## Параметры генерации
 

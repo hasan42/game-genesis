@@ -26,6 +26,46 @@ export const ILLUSTRATION_MAP: Record<string, string[]> = {
     // Outside in blizzard
     '56', '140', '141', '142', '143', '149', '150', '151',
   ],
+  'medical-bay': [
+    // Medical bay scenes
+    '7', '38', '52',
+  ],
+  'command-center': [
+    // Command center / control room
+    '34', '35', '102',
+  ],
+  'trap-phoenixoid': [
+    // Trap for the creature
+    '27', '76',
+  ],
+  'characters-group': [
+    // Group of survivors
+    '3', '4',
+  ],
+  'glider-vehicle': [
+    // Glider / vehicle on surface
+    '58', '114',
+  ],
+  'ice-crevasse': [
+    // Deep ice crevasse / dangerous crossing
+    '150', '173',
+  ],
+  't-field-barrier': [
+    // T-field barrier / force field
+    '1', '3',
+  ],
+  'fight-corridor': [
+    // Fight scenes in corridors
+    '6', '7',
+  ],
+  'frozen-ruins': [
+    // Ancient alien ruins in ice
+    '93', '133',
+  ],
+  'spaceport-ship': [
+    // Ship in frozen hangar - escape route
+    '192', '198',
+  ],
 };
 
 // Reverse mapping: paragraph id → illustration name
