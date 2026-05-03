@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { useGameStore } from '../engine/store';
 import { PARAGRAPH_LOCATION_MAP } from '../engine/locations';
 
-type LocationTheme = 'residential' | 'warehouse' | 'command' | 'workshop' | 'spaceport' | 'mine' | 'default';
+type LocationTheme = 'residential' | 'warehouse' | 'command' | 'workshop' | 'spaceport' | 'mine' | 'surface' | 'default';
 
 const LOCATION_THEMES: Record<LocationTheme, {
   bgGradient: string;
@@ -38,6 +38,11 @@ const LOCATION_THEMES: Record<LocationTheme, {
     bgGradient: 'from-frost-950 via-stone-900/30 to-frost-950',
     overlayOpacity: 0.2,
     borderColor: 'border-stone-700/30',
+  },
+  surface: {
+    bgGradient: 'from-frost-950 via-slate-800/30 to-frost-950',
+    overlayOpacity: 0.25,
+    borderColor: 'border-slate-600/30',
   },
   default: {
     bgGradient: 'from-frost-950 via-ice-950/10 to-frost-950',

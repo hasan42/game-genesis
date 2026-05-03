@@ -345,21 +345,44 @@
   animation: header-appear 0.5s ease-out, fade-in 0.5s ease-out;
 }
 
-/* 9.4 Location transition */
-@keyframes location-fade-in {
-  from { opacity: 0; transform: scale(0.95); }
-  to { opacity: 1; transform: scale(1); }
+/* 9.4 Location transition — 3-phase animation */
+
+/* Phase 1: fade-in (dark overlay appears) */
+.location-transition-fade-in {
+  animation: loc-overlay-fade-in 0.3s ease-out forwards;
 }
-.location-transition-enter {
-  animation: location-fade-in 1.5s ease-out forwards;
+.location-transition-fade-in .location-icon-animate,
+.location-transition-fade-in .location-name-animate {
+  opacity: 0;
+}
+@keyframes loc-overlay-fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
 }
 
-@keyframes location-fade-out {
+/* Phase 2: show (text + icon fade in) */
+.location-transition-show .location-icon-animate {
+  animation: loc-icon-pop 0.5s ease-out forwards;
+}
+.location-transition-show .location-name-animate {
+  animation: loc-text-fade-in 0.5s ease-out 0.15s forwards;
+}
+@keyframes loc-icon-pop {
+  from { opacity: 0; transform: scale(0.5); }
+  to { opacity: 1; transform: scale(1); }
+}
+@keyframes loc-text-fade-in {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* Phase 3: fade-out (everything fades out) */
+.location-transition-fade-out {
+  animation: loc-overlay-fade-out 0.5s ease-in forwards;
+}
+@keyframes loc-overlay-fade-out {
   from { opacity: 1; }
   to { opacity: 0; }
-}
-.location-transition-exit {
-  animation: location-fade-out 0.5s ease-in forwards;
 }
 
 /* ===== Этап 10A: Визуальные улучшения ===== */

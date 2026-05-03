@@ -3,7 +3,7 @@
  * Single source of truth used by StationMap, achievements, SnowEffect, LocationTransition.
  */
 
-export type LocationId = 'residential' | 'warehouse' | 'command' | 'workshop' | 'spaceport' | 'mine';
+export type LocationId = 'residential' | 'warehouse' | 'command' | 'workshop' | 'spaceport' | 'mine' | 'surface';
 
 export const LOCATION_DATA: Record<LocationId, {
   name: string;
@@ -17,7 +17,7 @@ export const LOCATION_DATA: Record<LocationId, {
     icon: '🏠',
     gradient: 'from-amber-950/40 via-frost-950 to-frost-950',
     description: 'Основное здание станции: каюты, холл, медпункт, столовая',
-    paragraphs: [1, 2, 3, 5, 7, 8, 9, 10, 14, 38, 39, 40, 42, 52, 56, 57, 58, 59, 60, 62, 63, 64, 65, 66, 67, 68, 69, 70, 71, 72, 73, 74, 75, 76, 77, 78, 79, 80, 81, 82, 83, 84, 85, 86, 87, 88, 89, 90, 91, 92, 93, 94, 99, 100, 101, 102, 104, 105, 106, 107, 108, 109, 110, 111, 112, 113, 114, 115, 116, 117, 118, 120, 121, 142, 159, 162, 175, 190, 191, 192, 194, 195, 196, 197, 198, 199, 200],
+    paragraphs: [1, 2, 3, 5, 7, 8, 9, 10, 14, 38, 39, 40, 42, 52, 56, 57, 58, 59, 60, 61, 62, 63, 64, 65, 66, 67, 68, 69, 70, 71, 72, 73, 74, 75, 76, 77, 78, 79, 80, 81, 82, 83, 84, 85, 86, 87, 88, 89, 90, 91, 92, 93, 94, 99, 100, 101, 102, 104, 105, 106, 107, 108, 109, 110, 111, 112, 113, 114, 115, 116, 117, 118, 120, 121, 142, 159, 162, 175, 190, 191, 192, 194, 195, 196, 197, 198, 199, 200],
   },
   warehouse: {
     name: 'Склад',
@@ -45,7 +45,7 @@ export const LOCATION_DATA: Record<LocationId, {
     icon: '🚀',
     gradient: 'from-red-950/40 via-frost-950 to-frost-950',
     description: 'Посадочная площадка, ангар для кораблей',
-    paragraphs: [95, 96, 97, 98, 193],
+    paragraphs: [95, 96, 97, 98, 103, 193],
   },
   mine: {
     name: 'Малая шахта',
@@ -53,6 +53,13 @@ export const LOCATION_DATA: Record<LocationId, {
     gradient: 'from-stone-900/50 via-frost-950 to-frost-950',
     description: 'Буровая вышка, добыча ресурсов',
     paragraphs: [6, 15, 27, 28, 29, 41],
+  },
+  surface: {
+    name: 'Поверхность',
+    icon: '🏔️',
+    gradient: 'from-slate-800/60 via-frost-950 to-frost-950',
+    description: 'Внешняя поверхность планеты, ледяные пустоши',
+    paragraphs: [58, 63, 73, 92],
   },
 };
 

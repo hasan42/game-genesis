@@ -7,6 +7,8 @@ type WindIntensity = 'storm' | 'strong' | 'moderate' | 'light' | 'none';
 function getWindIntensity(paragraphId: number): WindIntensity {
   // Spaceport = strong (outside)
   if (PARAGRAPH_LOCATION_MAP.spaceport?.includes(paragraphId)) return 'strong';
+  // Surface = strong (outside on the planet)
+  if (PARAGRAPH_LOCATION_MAP.surface?.includes(paragraphId)) return 'storm';
   // Mine = none (underground)
   if (PARAGRAPH_LOCATION_MAP.mine?.includes(paragraphId)) return 'none';
   // Residential = moderate

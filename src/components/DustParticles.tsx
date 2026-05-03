@@ -16,9 +16,10 @@ function getDustLocation(paragraphId: number): DustLocation {
   if (PARAGRAPH_LOCATION_MAP.command?.includes(paragraphId)) return 'inside';
   if (PARAGRAPH_LOCATION_MAP.warehouse?.includes(paragraphId)) return 'inside';
   if (PARAGRAPH_LOCATION_MAP.workshop?.includes(paragraphId)) return 'inside';
-  // Outside: spaceport, mine
+  // Outside: spaceport, mine, surface
   if (PARAGRAPH_LOCATION_MAP.spaceport?.includes(paragraphId)) return 'outside';
   if (PARAGRAPH_LOCATION_MAP.mine?.includes(paragraphId)) return 'outside';
+  if (PARAGRAPH_LOCATION_MAP.surface?.includes(paragraphId)) return 'outside';
   return 'none';
 }
 

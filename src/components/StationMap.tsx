@@ -22,6 +22,7 @@ const locations: MapLocation[] = [
   { id: 'workshop', name: 'Мастерская', x: 320, y: 220, description: 'Ремонт и обслуживание техники' },
   { id: 'spaceport', name: 'Космопорт', x: 440, y: 150, description: 'Посадочная площадка, ангар для кораблей' },
   { id: 'mine', name: 'Малая шахта', x: 220, y: 320, description: 'Буровая вышка, добыча ресурсов' },
+  { id: 'surface', name: 'Поверхность', x: 440, y: 300, description: 'Внешняя поверхность планеты, ледяные пустоши' },
 ];
 
 // Connections between locations
@@ -34,6 +35,8 @@ const connections = [
   ['workshop', 'spaceport'],
   ['command', 'mine'],
   ['workshop', 'mine'],
+  ['spaceport', 'surface'],
+  ['mine', 'surface'],
 ];
 
 function getLocationCenter(id: string): { x: number; y: number } {

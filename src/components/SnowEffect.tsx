@@ -7,6 +7,8 @@ type SnowIntensity = 'blizzard' | 'normal' | 'light' | 'none';
 function getSnowIntensity(paragraphId: number): SnowIntensity {
   // Spaceport = blizzard (outside)
   if (PARAGRAPH_LOCATION_MAP.spaceport?.includes(paragraphId)) return 'blizzard';
+  // Surface = blizzard (outside on the planet surface)
+  if (PARAGRAPH_LOCATION_MAP.surface?.includes(paragraphId)) return 'blizzard';
   // Mine = normal (partially outside)
   if (PARAGRAPH_LOCATION_MAP.mine?.includes(paragraphId)) return 'normal';
   // Command = light (inside)
