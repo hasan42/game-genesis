@@ -453,7 +453,7 @@ export function GameScreen() {
               <button
                 onClick={useMedkit}
                 className="mt-6 w-full px-4 py-3 bg-success/10 hover:bg-success/20 border border-success/30 text-success rounded-lg transition-colors text-sm"
-                aria-label={`Использовать аптечку: +${gameData.metadata.medkitHeal} здоровья, осталось ${stats.medkits}`}
+                aria-label={`Использовать аптечку: +${gameData.metadata.medkitHeal} здоровья, осталось ${stats.medkits} ${formatMedkits(stats.medkits)}`}
               >
                 Использовать аптечку (+{gameData.metadata.medkitHeal} здоровья) • Осталось: {stats.medkits} {formatMedkits(stats.medkits)}
               </button>

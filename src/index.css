@@ -60,6 +60,15 @@
   body {
     @apply bg-frost-950 text-frost-100 font-serif antialiased;
   }
+
+  /* 8.5 — Visible focus ring for keyboard navigation */
+  :focus-visible {
+    outline: 2px solid #38bdf8; /* ice-400 */
+    outline-offset: 2px;
+  }
+  button:focus:not(:focus-visible) {
+    outline: none;
+  }
 }
 
 /* Blizzard snow particles */
