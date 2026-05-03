@@ -22,8 +22,8 @@ function getSnowIntensity(paragraphId: number): SnowIntensity {
 
 const INTENSITY_COUNT: Record<SnowIntensity, number> = {
   blizzard: 25,
-  normal: 20,
-  light: 10,
+  normal: 18,
+  light: 8,
   none: 0,
 };
 

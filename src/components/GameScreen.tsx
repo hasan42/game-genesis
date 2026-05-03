@@ -6,11 +6,10 @@ import {
   saveReachedEnding,
   getReachedEndings,
   ENDING_PARAGRAPH_IDS,
-  getVisitedLocations,
-  PARAGRAPH_LOCATION_MAP,
   getUnlockedAchievements,
 } from '../engine/achievements';
 import type { AchievementContext } from '../engine/achievements';
+import { PARAGRAPH_LOCATION_MAP, getVisitedLocations as getVisitedLocationsFromData } from '../engine/locations';
 import { showToast, ToastContainer } from './ToastContainer';
 import { StatsPanel } from './StatsPanel';
 import { KeywordsPanel } from './KeywordsPanel';
@@ -27,12 +26,14 @@ import { playSound, SoundEffectsToggle } from './SoundEffects';
 import { DynamicBackground, HealthVignette, VisualEffects } from './DynamicBackground';
 import { LocationTransition, getLocationForParagraph } from './LocationTransition';
 import { processParagraphText } from '../utils/textProcessing';
+import { formatMedkits } from '../utils/i18n';
 import { ChoiceCard, inferChoiceType } from './ChoiceCard';
 import { SnowflakeDivider } from './SnowflakeDivider';
 import { CriticalHealthOverlay } from './CriticalHealthOverlay';
 import { FloatingActionButton } from './FloatingActionButton';
 import { BottomSheet } from './BottomSheet';
 import { FootnoteTooltip, findLoreTerms } from './FootnoteTooltip';
+import { ReferenceModal } from './ReferenceModal';
 
 // Lazy-loaded heavy modals — reduces initial bundle size
 const JournalModal = lazy(() => import('./JournalModal').then(m => ({ default: m.JournalModal })));
@@ -63,6 +64,7 @@ export function GameScreen() {
   const [saveOpen, setSaveOpen] = useState(false);
   const [achievementsOpen, setAchievementsOpen] = useState(false);
   const [keywordsSheetOpen, setKeywordsSheetOpen] = useState(false);
+  const [referenceOpen, setReferenceOpen] = useState(false);
   const [activeTutorial, setActiveTutorial] = useState<string | null>(null);
   const [locationTransition, setLocationTransition] = useState<{ targetParagraphId: number; fromParagraphId: number | null } | null>(null);
   const prevParagraphIdRef = useRef<number | null>(null);
@@ -72,7 +74,7 @@ export function GameScreen() {
   useEffect(() => {
     if (phase !== 'playing' && phase !== 'victory') return;
     const paragraphsVisited = new Set(history.map(h => h.paragraphId));
-    const visitedLocations = getVisitedLocations(paragraphsVisited);
+    const visitedLocations = getVisitedLocationsFromData(paragraphsVisited);
     const ctx: AchievementContext = {
       paragraphsVisited,
       totalParagraphs: gameData.paragraphs.length,
@@ -151,7 +153,7 @@ export function GameScreen() {
     }
   }, [phase, currentParagraph?.id]);
 
-  // Keyboard navigation for choices
+  // Keyboard navigation for choices (8.5 — Tab + ArrowUp/Down to move, Enter to confirm)
   useEffect(() => {
     if (phase !== 'playing') return;
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -159,7 +161,21 @@ export function GameScreen() {
       const buttons = choicesRef.current.querySelectorAll<HTMLButtonElement>('button[data-choice-index]');
       if (buttons.length === 0) return;
 
-      if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+      // Tab: cycle forward through choices (Shift+Tab backwards)
+      if (e.key === 'Tab') {
+        e.preventDefault();
+        const focused = document.activeElement;
+        const currentIndex = Array.from(buttons).indexOf(focused as HTMLButtonElement);
+        let nextIndex: number;
+        if (e.shiftKey) {
+          nextIndex = currentIndex > 0 ? currentIndex - 1 : buttons.length - 1;
+        } else {
+          nextIndex = currentIndex < buttons.length - 1 ? currentIndex + 1 : 0;
+        }
+        buttons[nextIndex].focus();
+      }
+      // ArrowUp/Down: also cycle
+      else if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
         e.preventDefault();
         const focused = document.activeElement;
         const currentIndex = Array.from(buttons).indexOf(focused as HTMLButtonElement);
@@ -170,6 +186,13 @@ export function GameScreen() {
           nextIndex = currentIndex > 0 ? currentIndex - 1 : buttons.length - 1;
         }
         buttons[nextIndex].focus();
+      }
+      // Enter: confirm the currently focused choice
+      else if (e.key === 'Enter') {
+        const focused = document.activeElement;
+        if (Array.from(buttons).includes(focused as HTMLButtonElement)) {
+          (focused as HTMLButtonElement).click();
+        }
       }
     };
     window.addEventListener('keydown', handleKeyDown);
@@ -356,11 +379,11 @@ export function GameScreen() {
               })()}
             </div>
 
-            {/* Effects info */}
-            {!readerMode && currentParagraph.effects.length > 0 && (
+            {/* Effects info — only significant effects (8.5) */}
+            {!readerMode && currentParagraph.effects.filter(isSignificantEffect).length > 0 && (
               <div className="mb-6 p-3 bg-frost-900/50 rounded border border-frost-800">
                 <div className="text-frost-500 text-xs mb-1">Эффекты:</div>
-                {currentParagraph.effects.map((e, i) => (
+                {currentParagraph.effects.filter(isSignificantEffect).map((e, i) => (
                   <span key={i} className="text-sm mr-2">
                     {formatEffect(e)}
                   </span>
@@ -448,6 +471,14 @@ export function GameScreen() {
               <div className="flex items-center gap-3 flex-wrap">
                 <JournalButton onClick={() => setJournalOpen(true)} />
                 <MapButton onClick={() => setMapOpen(true)} />
+                <button
+                  onClick={() => setReferenceOpen(true)}
+                  className="text-frost-500 hover:text-frost-300 text-sm transition-colors flex items-center gap-2"
+                  aria-label="Справочная информация"
+                >
+                  <span>📖</span>
+                  <span>Справочник</span>
+                </button>
                 <QuickSaveButton onClick={() => setSaveOpen(true)} />
                 <button
                   onClick={() => setAchievementsOpen(true)}
@@ -487,11 +518,11 @@ export function GameScreen() {
               {/* Keywords panel in sidebar */}
               {!readerMode && <KeywordsPanel />}
 
-              {/* Effects panel in sidebar */}
-              {!readerMode && currentParagraph.effects.length > 0 && (
+              {/* Effects panel in sidebar — only significant effects (8.5) */}
+              {!readerMode && currentParagraph.effects.filter(isSignificantEffect).length > 0 && (
                 <div className="p-3 bg-frost-900/40 rounded border border-frost-800/50">
                   <div className="text-frost-500 text-xs mb-1">Эффекты параграфа:</div>
-                  {currentParagraph.effects.map((e, i) => (
+                  {currentParagraph.effects.filter(isSignificantEffect).map((e, i) => (
                     <span key={i} className="text-sm mr-2">{formatEffect(e)}</span>
                   ))}
                 </div>
@@ -510,6 +541,12 @@ export function GameScreen() {
                   className="text-frost-500 hover:text-frost-300 text-xs transition-colors flex items-center gap-1 px-2 py-1 rounded hover:bg-frost-900/50"
                 >
                   📜 Журнал
+                </button>
+                <button
+                  onClick={() => setReferenceOpen(true)}
+                  className="text-frost-500 hover:text-frost-300 text-xs transition-colors flex items-center gap-1 px-2 py-1 rounded hover:bg-frost-900/50"
+                >
+                  📖 Справочник
                 </button>
                 <button
                   onClick={() => setSaveOpen(true)}
@@ -541,6 +578,7 @@ export function GameScreen() {
           items={[
             { icon: '📜', label: 'Журнал', onClick: () => setJournalOpen(true), badge: history.length || undefined },
             { icon: '🗺️', label: 'Карта', onClick: () => setMapOpen(true) },
+            { icon: '📖', label: 'Справочник', onClick: () => setReferenceOpen(true) },
             { icon: '💾', label: 'Сохранить', onClick: () => setSaveOpen(true) },
             { icon: '🏆', label: 'Ачивки', onClick: () => setAchievementsOpen(true) },
             { icon: '🔊', label: 'Озвучить', onClick: () => {}, active: false },
@@ -555,10 +593,10 @@ export function GameScreen() {
         title="Ключевые слова и эффекты"
       >
         {!readerMode && <KeywordsPanel />}
-        {!readerMode && currentParagraph.effects.length > 0 && (
+        {!readerMode && currentParagraph.effects.filter(isSignificantEffect).length > 0 && (
           <div className="mt-3">
             <div className="text-frost-500 text-xs mb-1">Эффекты:</div>
-            {currentParagraph.effects.map((e, i) => (
+            {currentParagraph.effects.filter(isSignificantEffect).map((e, i) => (
               <span key={i} className="text-sm mr-2">{formatEffect(e)}</span>
             ))}
           </div>
@@ -578,6 +616,7 @@ export function GameScreen() {
       )}
       {saveOpen && <QuickSaveModal onClose={() => setSaveOpen(false)} />}
       {achievementsOpen && <AchievementsModal onClose={() => setAchievementsOpen(false)} />}
+      {referenceOpen && <ReferenceModal onClose={() => setReferenceOpen(false)} />}
 
       {/* 9.4 — Location transition overlay */}
       {locationTransition && (
@@ -1109,6 +1148,18 @@ function statIcon(stat: string): string {
   return icons[stat] || '';
 }
 
+/**
+ * Filter effects to only show significant ones.
+ * Show: health changes (any value), |change| >= 2, medkit changes, set_health.
+ * Hide: small stat changes like aura +1, agility −1.
+ */
+function isSignificantEffect(e: any): boolean {
+  if (e.type === 'add_medkit' || e.type === 'remove_medkit' || e.type === 'use_medkit' || e.type === 'set_health') return true;
+  if (e.stat === 'health') return true;
+  if (Math.abs(e.value) >= 2) return true;
+  return false;
+}
+
 function formatEffect(e: any): string {
   if (e.type === 'add_medkit') return `+${e.value} ${formatMedkits(e.value)}`;
   if (e.type === 'remove_medkit') return `−${e.value} ${formatMedkits(e.value)}`;
@@ -1119,11 +1170,7 @@ function formatEffect(e: any): string {
   return `${e.type}: ${JSON.stringify(e)}`;
 }
 
-function formatMedkits(count: number): string {
-  if (count === 1) return 'аптечка';
-  if (count >= 2 && count <= 4) return 'аптечки';
-  return 'аптечек';
-}
+// formatMedkits moved to utils/i18n.ts
 
 /**
  * In reader mode, all conditional choices are shown as regular choices.

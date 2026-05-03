@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useGameStore } from '../engine/store';
 import { TimeIndicator } from './TimeIndicator';
+import { formatMedkits } from '../utils/i18n';
 
 const STAT_CONFIG = [
   { key: 'health', label: 'Здоровье', icon: '❤️', color: 'bg-danger', showBar: true },
@@ -39,6 +40,8 @@ export function StatsPanel() {
                     </div>
                     <span className="text-frost-200 font-mono text-xs">{value}</span>
                   </div>
+                ) : key === 'medkits' ? (
+                  <span className={`font-mono text-xs ${expanded ? 'text-frost-200' : 'text-frost-400 sm:text-frost-200'} hidden sm:inline`}>{value} {formatMedkits(value)}</span>
                 ) : (
                   <span className={`font-mono text-xs ${expanded ? 'text-frost-200' : 'text-frost-400 sm:text-frost-200'} hidden sm:inline`}>{value}</span>
                 )}
@@ -59,11 +62,12 @@ export function StatsPanel() {
           <div className="grid grid-cols-3 gap-2 mt-2 sm:hidden">
             {STAT_CONFIG.filter(s => !s.showBar).map(({ key, label, icon }) => {
               const value = (stats as any)[key];
+              const suffix = key === 'medkits' ? ` ${formatMedkits(value)}` : '';
               return (
                 <div key={key} className="text-center">
                   <span className="text-xs">{icon}</span>
                   <span className="text-frost-400 text-xs ml-1">{label}</span>
-                  <span className="text-frost-200 font-mono text-xs ml-1">{value}</span>
+                  <span className="text-frost-200 font-mono text-xs ml-1">{value}{suffix}</span>
                 </div>
               );
             })}

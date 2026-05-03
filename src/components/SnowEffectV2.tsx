@@ -28,7 +28,7 @@ export function useSnowIntensity(): number {
 
 export function SnowEffectV2() {
   const intensity = useSnowIntensity();
-  const count = Math.round(intensity * 2.5); // 0-25 particles
+  const count = Math.min(Math.round(intensity * 2.5), 25); // cap at 25 particles (8.5)
 
   const snowflakes = useMemo(() => {
     if (count === 0) return [];

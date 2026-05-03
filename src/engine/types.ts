@@ -96,6 +96,17 @@ export interface GameMetadata {
 export interface GameData {
   metadata: GameMetadata;
   paragraphs: Paragraph[];
+  reference?: ReferenceData;
+}
+
+export interface ReferenceSection {
+  id: string;
+  title: string;
+  text: string[];
+}
+
+export interface ReferenceData {
+  sections: ReferenceSection[];
 }
 
 export interface KeywordRecord {
